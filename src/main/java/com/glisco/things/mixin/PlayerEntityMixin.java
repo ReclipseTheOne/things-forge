@@ -1,34 +1,35 @@
 package com.glisco.things.mixin;
 
 import com.glisco.things.items.ThingsItems;
-import net.minecraft.component.type.FoodComponent;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.world.World;
+import io.wispforest.accessories.api.AccessoriesCapability;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(PlayerEntity.class)
+@Mixin(Player.class)
 public abstract class PlayerEntityMixin {
 
     @Inject(method = "eatFood", at = @At("TAIL"))
-    public void onConsume(World world, ItemStack stack, FoodComponent foodComponent, CallbackInfoReturnable<ItemStack> cir) {
+    public void onConsume(Level world, ItemStack stack, FoodProperties foodComponent, CallbackInfoReturnable<ItemStack> cir) {
 
         if (!stack.getItem().equals(Items.POISONOUS_POTATO)) return;
 
-        var player = (PlayerEntity) (Object) this;
-        var capability = player.accessoriesCapability();
+        var player = (Player) (Object) this;
+        var capability = AccessoriesCapability.get(player);
 
         if (capability == null || !capability.isEquipped(ThingsItems.LUCK_OF_THE_IRISH)) return;
 
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION, 100, 1));
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.LUCK, 400, 0));
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.SATURATION, 2, 0));
-        player.removeStatusEffect(StatusEffects.POISON);
+        player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 100, 1));
+        player.addEffect(new MobEffectInstance(MobEffects.LUCK, 400, 0));
+        player.addEffect(new MobEffectInstance(MobEffects.SATURATION, 2, 0));
+        player.removeEffect(MobEffects.POISON);
     }
 }

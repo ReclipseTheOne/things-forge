@@ -2,7 +2,7 @@ package com.glisco.things.misc;
 
 import blue.endless.jankson.Comment;
 import io.wispforest.owo.config.annotation.*;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 @Modmenu(modId = "things")
 @Config(name = "things", wrapperName = "ThingsConfig")
@@ -43,7 +43,7 @@ public class ThingsConfigModel {
 
     public boolean enableRecallPotionRecipe = true;
 
-    public Identifier recallPotionIngredient = Identifier.of("ender_pearl");
+    public ResourceLocation recallPotionIngredient = ResourceLocation.parse("ender_pearl");
 
     @Comment("How many ender pearls the displacement tome uses per teleport")
     @RangeConstraint(min = 1, max = 128)

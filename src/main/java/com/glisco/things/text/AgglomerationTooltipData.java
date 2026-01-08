@@ -1,7 +1,7 @@
 package com.glisco.things.text;
 
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipData;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.ItemStack;
 
-public record AgglomerationTooltipData(Text beginningText, ItemStack stack, Text endText) implements TooltipData {}
+public record AgglomerationTooltipData(Component beginningText, ItemStack stack, Component endText) implements TooltipComponent {}

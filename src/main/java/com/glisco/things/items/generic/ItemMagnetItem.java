@@ -2,30 +2,30 @@ package com.glisco.things.items.generic;
 
 import com.glisco.things.Things;
 import com.mojang.serialization.Codec;
-import io.wispforest.owo.itemgroup.OwoItemSettings;
+import io.wispforest.owo.itemgroup.OwoItemSettingsExtension;
 import io.wispforest.owo.particles.ClientParticles;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.minecraft.component.ComponentType;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.particle.DustParticleEffect;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
-import net.minecraft.util.TypedActionResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.minecraft.core.Registry;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
 
 import java.util.HashSet;
@@ -37,98 +37,98 @@ public class ItemMagnetItem extends Item {
     private static final int USE_COST = 50;
     private static final int MAX_CHARGE = 200;
 
-    public static final ComponentType<Integer> CHARGE = Registry.register(
-            Registries.DATA_COMPONENT_TYPE,
+    public static final DataComponentType<Integer> CHARGE = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
             Things.id("item_magnet_charge"),
-            ComponentType.<Integer>builder()
-                    .codec(Codec.INT)
-                    .packetCodec(PacketCodecs.VAR_INT)
+            DataComponentType.<Integer>builder()
+                    .persistent(Codec.INT)
+                    .networkSynchronized(ByteBufCodecs.VAR_INT)
                     .build()
     );
 
     public ItemMagnetItem() {
-        super(new OwoItemSettings().group(Things.THINGS_GROUP).maxCount(1).component(CHARGE, MAX_CHARGE));
+        super(((OwoItemSettingsExtension) new Item.Properties()).group(() -> Things.THINGS_GROUP).stacksTo(1).component(CHARGE, MAX_CHARGE));
     }
 
     @Override
-    public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
-        var stack = user.getStackInHand(hand);
-        if (stack.get(CHARGE) < USE_COST) return TypedActionResult.pass(stack);
+    public InteractionResultHolder<ItemStack> use(Level world, Player user, InteractionHand hand) {
+        var stack = user.getItemInHand(hand);
+        if (stack.get(CHARGE) < USE_COST) return InteractionResultHolder.pass(stack);
 
         var teleportedItems = new HashSet<>();
         boolean blue = true;
 
         for (double i = 2; i < 10; i += 0.15) {
-            var result = user.raycast(i, 0, false);
+            var result = user.pick(i, 0, false);
 
-            if (world.isClient) {
+            if (world.isClientSide) {
                 blue = !blue;
-                var particle = new DustParticleEffect(new Vector3f(blue ? 0.5f : 1, 0, blue ? 1 : 0.5f), 1);
-                world.addParticle(particle, result.getPos().x, result.getPos().y, result.getPos().z, 0, 0, 0);
+                var particle = new DustParticleOptions(new Vector3f(blue ? 0.5f : 1, 0, blue ? 1 : 0.5f), 1);
+                world.addParticle(particle, result.getLocation().x, result.getLocation().y, result.getLocation().z, 0, 0, 0);
 
                 if (i > 9.5) {
-                    displayTerminator(world, result.getPos(), 0.65);
+                    displayTerminator(world, result.getLocation(), 0.65);
                 }
             }
 
             if (!result.getType().equals(HitResult.Type.MISS)) {
 
-                if (world.isClient) {
-                    HitResult terminatorPosition = user.raycast(i - 0.75, 0, false);
-                    displayTerminator(world, terminatorPosition.getPos(), 0.25);
+                if (world.isClientSide) {
+                    HitResult terminatorPosition = user.pick(i - 0.75, 0, false);
+                    displayTerminator(world, terminatorPosition.getLocation(), 0.25);
                 }
 
                 break;
             }
 
             double radius = 1.25 + (stack.get(CHARGE) / (double) MAX_CHARGE) * 2;
-            Vec3d box1 = result.getPos().add(-radius, -radius, -radius);
-            Vec3d box2 = result.getPos().add(radius, radius, radius);
+            Vec3 box1 = result.getLocation().add(-radius, -radius, -radius);
+            Vec3 box2 = result.getLocation().add(radius, radius, radius);
 
-            for (var item : world.getNonSpectatingEntities(ItemEntity.class, new Box(box1, box2))) {
+            for (var item : world.getEntitiesOfClass(ItemEntity.class, new AABB(box1, box2))) {
                 if (!teleportedItems.add(item)) continue;
 
-                if (world.isClient) {
+                if (world.isClientSide) {
                     ClientParticles.setParticleCount(2);
-                    ClientParticles.spawn(ParticleTypes.POOF, world, item.getPos().add(0, .35, 0), .1f);
+                    ClientParticles.spawn(ParticleTypes.POOF, world, item.position().add(0, .35, 0), .1f);
                 } else {
-                    item.updatePosition(user.getX(), user.getY(), user.getZ());
+                    item.absMoveTo(user.getX(), user.getY(), user.getZ());
                     item.setNoGravity(true);
-                    item.setVelocity(Vec3d.ZERO);
-                    item.setPickupDelay(0);
+                    item.setDeltaMovement(Vec3.ZERO);
+                    item.setPickUpDelay(0);
                 }
             }
         }
 
-        user.playSound(SoundEvents.ENTITY_ENDERMAN_TELEPORT, 0.125f, 2);
+        user.playSound(SoundEvents.ENDERMAN_TELEPORT, 0.125f, 2);
         stack.set(CHARGE, stack.get(CHARGE) - USE_COST);
 
-        return TypedActionResult.success(stack);
+        return InteractionResultHolder.success(stack);
     }
 
     @Override
-    public void appendTooltip(ItemStack stack, TooltipContext context, List<Text> tooltip, TooltipType type) {
-        tooltip.add(Text.translatable(this.getTranslationKey() + ".tooltip", stack.get(CHARGE)));
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag type) {
+        tooltip.add(Component.translatable(this.getDescriptionId() + ".tooltip", stack.get(CHARGE)));
     }
 
     @Override
-    public void inventoryTick(ItemStack stack, World world, Entity entity, int slot, boolean selected) {
+    public void inventoryTick(ItemStack stack, Level world, Entity entity, int slot, boolean selected) {
         if (stack.get(CHARGE) >= MAX_CHARGE) return;
-        stack.apply(CHARGE, MAX_CHARGE, energy -> Math.min(energy + 1 + energy / 80, MAX_CHARGE));
+        stack.update(CHARGE, MAX_CHARGE, energy -> Math.min(energy + 1 + energy / 80, MAX_CHARGE));
     }
 
     @Override
-    public boolean isItemBarVisible(ItemStack stack) {
+    public boolean isBarVisible(ItemStack stack) {
         return stack.get(CHARGE) < MAX_CHARGE;
     }
 
     @Override
-    public int getItemBarStep(ItemStack stack) {
+    public int getBarWidth(ItemStack stack) {
         return (int) (13 * (stack.get(CHARGE) / (float) MAX_CHARGE));
     }
 
     @Override
-    public int getItemBarColor(ItemStack stack) {
+    public int getBarColor(ItemStack stack) {
         float energy = stack.get(CHARGE) / (float) MAX_CHARGE;
 
         int r = (int) (100 + 155 * (1 - energy));
@@ -137,19 +137,14 @@ public class ItemMagnetItem extends Item {
         return r << 16 | b;
     }
 
-    @Environment(EnvType.CLIENT)
-    private static void displayTerminator(World world, Vec3d at, double spread) {
+    @OnlyIn(Dist.CLIENT)
+    private static void displayTerminator(Level world, Vec3 at, double spread) {
         ClientParticles.setParticleCount(5);
         ClientParticles.spawn(ParticleTypes.WITCH, world, at, spread);
     }
 
     @Override
-    public boolean hasGlint(ItemStack stack) {
+    public boolean isFoil(ItemStack stack) {
         return false;
-    }
-
-    @Override
-    public boolean allowComponentsUpdateAnimation(PlayerEntity player, Hand hand, ItemStack oldStack, ItemStack newStack) {
-        return Objects.equals(oldStack.get(CHARGE), newStack.get(CHARGE));
     }
 }

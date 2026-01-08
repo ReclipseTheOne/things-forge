@@ -1,21 +1,22 @@
 package com.glisco.things.blocks;
 
+import io.wispforest.accessories.endec.NbtMapCarrier;
 import io.wispforest.endec.Endec;
 import io.wispforest.endec.SerializationContext;
 import io.wispforest.endec.impl.KeyedEndec;
 import io.wispforest.owo.ops.WorldOps;
 import io.wispforest.owo.serialization.RegistriesAttribute;
 import io.wispforest.owo.serialization.endec.MinecraftEndecs;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
-import net.minecraft.registry.DynamicRegistryManager;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -40,29 +41,31 @@ public class PlacedItemBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void writeNbt(NbtCompound tag, RegistryWrapper.WrapperLookup registries) {
-        super.writeNbt(tag, registries);
+    public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
 
-        var ctx = SerializationContext.attributes(RegistriesAttribute.of((DynamicRegistryManager) registries));
+        var ctx = SerializationContext.attributes(RegistriesAttribute.of((RegistryAccess) registries));
+	    NbtMapCarrier nbt = new NbtMapCarrier(tag);
 
-        tag.put(ctx, ITEM_KEY, this.item);
-        tag.put(ctx, ROTATION_KEY, rotation);
+        nbt.put(ctx, ITEM_KEY, this.item);
+        nbt.put(ctx, ROTATION_KEY, rotation);
     }
 
     @Override
-    public void readNbt(NbtCompound tag, RegistryWrapper.WrapperLookup registries) {
-        super.readNbt(tag, registries);
+    public void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
 
-        var ctx = SerializationContext.attributes(RegistriesAttribute.of((DynamicRegistryManager) registries));
+	    var ctx = SerializationContext.attributes(RegistriesAttribute.of((RegistryAccess) registries));
+	    NbtMapCarrier nbt = new NbtMapCarrier(tag);
 
-        this.item = tag.get(ctx, ITEM_KEY);
-        this.rotation = tag.get(ctx, ROTATION_KEY);
+        this.item = nbt.get(ctx, ITEM_KEY);
+        this.rotation = nbt.get(ctx, ROTATION_KEY);
     }
 
     @Override
-    public void markDirty() {
-        super.markDirty();
-        WorldOps.updateIfOnServer(world, pos);
+    public void setChanged() {
+        super.setChanged();
+        WorldOps.updateIfOnServer(level, worldPosition);
     }
 
     public int getRotation() {
@@ -73,7 +76,7 @@ public class PlacedItemBlockEntity extends BlockEntity {
         this.rotation = rotation;
         if (this.rotation > 7) this.rotation = 0;
         if (this.rotation < 0) this.rotation = 7;
-        this.markDirty();
+        this.setChanged();
     }
 
     public void changeRotation(boolean direction) {
@@ -82,14 +85,14 @@ public class PlacedItemBlockEntity extends BlockEntity {
 
     @Nullable
     @Override
-    public Packet<ClientPlayPacketListener> toUpdatePacket() {
-        return BlockEntityUpdateS2CPacket.create(this);
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
     }
 
     @Override
-    public NbtCompound toInitialChunkDataNbt(RegistryWrapper.WrapperLookup registries) {
-        var tag = new NbtCompound();
-        this.writeNbt(tag, registries);
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        var tag = new CompoundTag();
+        this.saveAdditional(tag, registries);
         return tag;
     }
 }

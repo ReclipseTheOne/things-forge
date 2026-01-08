@@ -12,134 +12,148 @@ import com.glisco.things.mixin.client.access.CreativeSlotAccessor;
 import com.glisco.things.mixin.client.access.HandledScreenAccessor;
 import com.glisco.things.text.AgglomerationTooltipComponent;
 import com.glisco.things.text.AgglomerationTooltipData;
+import io.wispforest.accessories.api.AccessoriesCapability;
+import net.minecraft.client.KeyMapping;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.MenuScreens;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
+import net.minecraft.client.renderer.item.ItemProperties;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.BlockHitResult;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.*;
+import net.neoforged.neoforge.client.gui.ConfigurationScreen;
+import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
+import net.neoforged.neoforge.common.NeoForge;
+import org.lwjgl.glfw.GLFW;
 import io.wispforest.accessories.api.client.AccessoriesRendererRegistry;
 import io.wispforest.accessories.api.client.AccessoryRenderer;
 import io.wispforest.accessories.api.components.AccessoriesDataComponents;
-import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.api.EnvType;
-import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.fabricmc.fabric.api.client.rendering.v1.TooltipComponentCallback;
-import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
-import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents;
-import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
-import net.minecraft.client.gui.screen.ingame.HandledScreens;
-import net.minecraft.client.item.ModelPredicateProviderRegistry;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.Items;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.hit.BlockHitResult;
-import org.lwjgl.glfw.GLFW;
+import top.theillusivec4.curios.api.CuriosApi;
 
-@Environment(EnvType.CLIENT)
-public class ThingsClient implements ClientModInitializer {
+/**
+ * Client-side initialization for the Things mod on NeoForge.
+ */
+@OnlyIn(Dist.CLIENT)
+@EventBusSubscriber(modid = Things.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+public class ThingsClient {
 
     public static final String THINGS_CATEGORY = "category." + Things.MOD_ID + "." + Things.MOD_ID;
 
-    public static final KeyBinding PLACE_ITEM =
-            KeyBindingHelper.registerKeyBinding(new KeyBinding(keybindId("place_item"), GLFW.GLFW_KEY_J, THINGS_CATEGORY));
+    public static KeyMapping PLACE_ITEM;
+    public static KeyMapping OPEN_ENDER_CHEST;
+    public static KeyMapping TOGGLE_SOCKS_JUMP_BOOST;
 
-    public static final KeyBinding OPEN_ENDER_CHEST =
-            KeyBindingHelper.registerKeyBinding(new KeyBinding(keybindId("openenderchest"), GLFW.GLFW_KEY_G, THINGS_CATEGORY));
+	public ThingsClient(IEventBus eventBus, ModContainer modContainer) {
+		eventBus.addListener(this::registerMenus);
+	}
 
-    public static final KeyBinding TOGGLE_SOCKS_JUMP_BOOST =
-            KeyBindingHelper.registerKeyBinding(new KeyBinding(keybindId("toggle_socks_jump_boost"), GLFW.GLFW_KEY_CAPS_LOCK, THINGS_CATEGORY));
+    @SubscribeEvent
+    public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
+        PLACE_ITEM = new KeyMapping(keybindId("place_item"), GLFW.GLFW_KEY_J, THINGS_CATEGORY);
+        OPEN_ENDER_CHEST = new KeyMapping(keybindId("openenderchest"), GLFW.GLFW_KEY_G, THINGS_CATEGORY);
+        TOGGLE_SOCKS_JUMP_BOOST = new KeyMapping(keybindId("toggle_socks_jump_boost"), GLFW.GLFW_KEY_CAPS_LOCK, THINGS_CATEGORY);
 
-    @Override
-    public void onInitializeClient() {
-        BlockEntityRendererFactories.register(ThingsBlocks.PLACED_ITEM_BLOCK_ENTITY, PlacedItemBlockEntityRenderer::new);
+        event.register(PLACE_ITEM);
+        event.register(OPEN_ENDER_CHEST);
+        event.register(TOGGLE_SOCKS_JUMP_BOOST);
+    }
 
-        HandledScreens.register(Things.DISPLACEMENT_TOME_SCREEN_HANDLER, DisplacementTomeScreen::new);
+    @SubscribeEvent
+    public static void onClientSetup(FMLClientSetupEvent event) {
+        event.enqueueWork(() -> {
+            BlockEntityRenderers.register(ThingsBlocks.PLACED_ITEM_BLOCK_ENTITY, PlacedItemBlockEntityRenderer::new);
 
-        ModelPredicateProviderRegistry.register(ThingsItems.DISPLACEMENT_TOME, Identifier.of("pages"), new DisplacementTomeItem.PredicateProvider());
-        ModelPredicateProviderRegistry.register(ThingsItems.SOCKS, Identifier.of("jumpy"), (stack, world, entity, seed) -> stack.contains(SocksItem.JUMPY_AND_ENABLED) ? 1 : 0);
+            ItemProperties.register(ThingsItems.DISPLACEMENT_TOME, ResourceLocation.parse("pages"), new DisplacementTomeItem.PredicateProvider());
+            ItemProperties.register(ThingsItems.SOCKS, ResourceLocation.parse("jumpy"), (stack, world, entity, seed) -> stack.has(SocksItem.JUMPY_AND_ENABLED) ? 1 : 0);
 
-        AccessoriesRendererRegistry.registerRenderer(Items.APPLE, AppleTrinket.Renderer::new);
-
-        registerRenderedTrinket(ThingsItems.ENCHANTED_WAX_GLAND);
-        registerRenderedTrinket(ThingsItems.ENDER_POUCH);
-        registerRenderedTrinket(ThingsItems.HADES_CRYSTAL);
-        registerRenderedTrinket(ThingsItems.LUCK_OF_THE_IRISH);
-        registerRenderedTrinket(ThingsItems.MONOCLE);
-        registerRenderedTrinket(ThingsItems.MOSS_NECKLACE);
-        registerRenderedTrinket(ThingsItems.AGGLOMERATION);
-
-        AccessoriesRendererRegistry.registerNoRenderer(ThingsItems.SOCKS);
-        AccessoriesRendererRegistry.registerNoRenderer(ThingsItems.SHOCK_ABSORBER);
-        AccessoriesRendererRegistry.registerNoRenderer(ThingsItems.RABBIT_FOOT_CHARM);
-
-        AccessoriesRendererRegistry.registerNoRenderer(ThingsItems.ARM_EXTENDER);
-        AccessoriesRendererRegistry.registerNoRenderer(ThingsItems.RIOT_GAUNTLET);
-        AccessoriesRendererRegistry.registerNoRenderer(ThingsItems.MINING_GLOVES);
-
-        AccessoriesRendererRegistry.registerNoRenderer(ThingsItems.BROKEN_WATCH);
-        AccessoriesRendererRegistry.registerNoRenderer(ThingsItems.PLACEBO);
-
-        ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (PLACE_ITEM.wasPressed()) {
-                if (!(client.crosshairTarget instanceof BlockHitResult blockResult)) break;
-                ThingsNetwork.CHANNEL.clientHandle().send(new ThingsNetwork.PlaceItemPacket(blockResult));
-            }
-
-            while (OPEN_ENDER_CHEST.wasPressed()) {
-                var capability = client.player.accessoriesCapability();
-
-                if (capability == null || !capability.isEquipped(ThingsItems.ENDER_POUCH)) break;
-                ThingsNetwork.CHANNEL.clientHandle().send(new ThingsNetwork.OpenEnderChestPacket());
-            }
-
-            while (TOGGLE_SOCKS_JUMP_BOOST.wasPressed()) {
-                var capability = client.player.accessoriesCapability();
-
-                if (capability == null || !capability.isEquipped(ThingsItems.SOCKS)) break;
-                ThingsNetwork.CHANNEL.clientHandle().send(new ThingsNetwork.ToggleSocksJumpBoostPacket());
-            }
+            // Register Curios renderers
+            // TODO: Register Curios renderers when porting to Curios API
+            // For now, trinket rendering will need to be handled via Curios' system
         });
 
-        // TODO agglomeration networking
-        ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
-            if (!(screen instanceof HandledScreen) || !Things.CONFIG.enableAgglomerationInvScrollSelection()) return;
+        // Register game event listeners
+        NeoForge.EVENT_BUS.addListener(ThingsClient::onClientTick);
+        NeoForge.EVENT_BUS.addListener(ThingsClient::onScreenInit);
+        NeoForge.EVENT_BUS.addListener(ThingsClient::onMouseScroll);
+        NeoForge.EVENT_BUS.addListener(ThingsClient::onGatherTooltipComponents);
+    }
 
-            ScreenMouseEvents.allowMouseScroll(screen).register((screen1, mouseX, mouseY, horizontalAmount, verticalAmount) -> {
-                var slot = ((HandledScreenAccessor) screen1).thing$getSlotAt(mouseX, mouseY);
+	private void registerMenus(RegisterMenuScreensEvent event) {
+		event.register(Things.DISPLACEMENT_TOME_SCREEN_HANDLER, DisplacementTomeScreen::new);
+	}
 
-                if (slot == null) return true;
 
-                var slotStack = slot.getStack();
-                int slotId = slot.id;
+	private static void onClientTick(ClientTickEvent.Post event) {
+		Minecraft client = Minecraft.getInstance();
+	    while (PLACE_ITEM.isDown()) {
+		    if (!(client.hitResult instanceof BlockHitResult blockResult)) break;
+		    ThingsNetwork.CHANNEL.clientHandle().send(new ThingsNetwork.PlaceItemPacket(blockResult));
+	    }
 
-                //This is required due to Screen Handler Mismatch for hotbar items with a given Itemgroup open in Creative Mode
-                boolean fromPlayerInv = screen1 instanceof CreativeInventoryScreen && slot.inventory instanceof PlayerInventory && slot.getIndex() < 9;
+	    while (OPEN_ENDER_CHEST.isDown()) {
+		    var capability = AccessoriesCapability.get(client.player);
 
-                if (slot instanceof CreativeSlotAccessor creativeSlot) {
-                    slotId = creativeSlot.things$getSlot().id;
-                }
+		    if (capability == null || !capability.isEquipped(ThingsItems.ENDER_POUCH)) break;
+		    ThingsNetwork.CHANNEL.clientHandle().send(new ThingsNetwork.OpenEnderChestPacket());
+	    }
 
-                if (slotStack.getItem() instanceof AgglomerationItem && slotStack.contains(AccessoriesDataComponents.NESTED_ACCESSORIES)) {
-                    ThingsNetwork.CHANNEL.clientHandle().send(new AgglomerationItem.ScrollStackFromSlotTrinket(fromPlayerInv, fromPlayerInv ? slot.getIndex() : slotId));
+	    while (TOGGLE_SOCKS_JUMP_BOOST.isDown()) {
+		    var capability = AccessoriesCapability.get(client.player);
 
-                    return false;
-                }
+		    if (capability == null || !capability.isEquipped(ThingsItems.SOCKS)) break;
+		    ThingsNetwork.CHANNEL.clientHandle().send(new ThingsNetwork.ToggleSocksJumpBoostPacket());
+	    }
+    }
 
-                return true;
-            });
-        });
+    private static void onScreenInit(ScreenEvent.Init.Post event) {
+        // Screen initialization handled in mouse scroll event
+    }
 
-        TooltipComponentCallback.EVENT.register(data -> {
-            return data instanceof AgglomerationTooltipData agglomerationTooltipData ? new AgglomerationTooltipComponent(agglomerationTooltipData) : null;
-        });
+    private static void onMouseScroll(ScreenEvent.MouseScrolled.Pre event) {
+        if (!(event.getScreen() instanceof AbstractContainerScreen<?> containerScreen)) return;
+        if (!Things.CONFIG.enableAgglomerationInvScrollSelection()) return;
+
+        var slot = ((HandledScreenAccessor) containerScreen).thing$getSlotAt(event.getMouseX(), event.getMouseY());
+        if (slot == null) return;
+
+        var slotStack = slot.getItem();
+        int slotId = slot.index;
+
+        // Handle Creative Mode inventory mismatch
+        boolean fromPlayerInv = containerScreen instanceof CreativeModeInventoryScreen
+                && slot.container instanceof Inventory
+                && slot.getContainerSlot() < 9;
+
+        if (slot instanceof CreativeSlotAccessor creativeSlot) {
+            slotId = creativeSlot.things$getSlot().index;
+        }
+
+        // TODO: Update for Curios API data components
+        if (slotStack.getItem() instanceof AgglomerationItem) {
+            ThingsNetwork.CHANNEL.clientHandle().send(
+                    new AgglomerationItem.ScrollStackFromSlotTrinket(fromPlayerInv, fromPlayerInv ? slot.getContainerSlot() : slotId)
+            );
+            event.setCanceled(true);
+        }
+    }
+
+    private static void onGatherTooltipComponents(RenderTooltipEvent.GatherComponents event) {
+        // Custom tooltip components handled via item's getTooltipImage method
     }
 
     private static String keybindId(String name) {
         return "key." + Things.MOD_ID + "." + name;
-    }
-
-    private void registerRenderedTrinket(Item trinket) {
-        AccessoriesRendererRegistry.registerRenderer(trinket, () -> (AccessoryRenderer) trinket);
     }
 }

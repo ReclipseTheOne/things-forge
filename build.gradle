@@ -55,7 +55,7 @@ neoForge {
 
     parchment {
         minecraftVersion = minecraft_version
-        mappingsVersion = "2024.07.28"
+        mappingsVersion = "2024.11.17"
     }
 
     runs {
@@ -107,6 +107,10 @@ dependencies {
     // REI dependencies
     compileOnly "me.shedaniel.cloth:cloth-config-neoforge:${cloth_config_version}"
     compileOnly "dev.architectury:architectury-neoforge:${architectury_version}"
+
+    implementation "io.wispforest:accessories-neoforge:${accessories_version}"
+
+    implementation annotationProcessor("io.wispforest:owo-lib-neoforge:${project.owo_version}")
 }
 
 tasks.withType(JavaCompile).configureEach {

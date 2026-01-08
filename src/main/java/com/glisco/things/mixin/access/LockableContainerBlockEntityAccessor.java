@@ -1,17 +1,17 @@
 package com.glisco.things.mixin.access;
 
-import net.minecraft.block.entity.LockableContainerBlockEntity;
-import net.minecraft.inventory.ContainerLock;
+import net.minecraft.world.LockCode;
+import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(LockableContainerBlockEntity.class)
+@Mixin(BaseContainerBlockEntity.class)
 public interface LockableContainerBlockEntityAccessor {
 
     @Accessor("lock")
-    void things$setLock(ContainerLock lock);
+    void things$setLock(LockCode lock);
 
     @Accessor("lock")
-    ContainerLock things$getLock();
+    LockCode things$getLock();
 
 }

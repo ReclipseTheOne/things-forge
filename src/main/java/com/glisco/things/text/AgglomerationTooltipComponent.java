@@ -7,15 +7,15 @@ import io.wispforest.owo.ui.container.FlowLayout;
 import io.wispforest.owo.ui.core.Insets;
 import io.wispforest.owo.ui.core.Sizing;
 import io.wispforest.owo.ui.core.VerticalAlignment;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 
 public final class AgglomerationTooltipComponent extends BaseOwoTooltipComponent<FlowLayout> {
     public AgglomerationTooltipComponent(AgglomerationTooltipData data) {
         super(() -> create(data.beginningText(), data.stack(), data.endText()));
     }
 
-    private static FlowLayout create(Text beginningText, ItemStack stack, Text endText) {
+    private static FlowLayout create(Component beginningText, ItemStack stack, Component endText) {
         var layout = Containers.horizontalFlow(Sizing.content(), Sizing.content());
 
         layout.child(Components.label(beginningText))

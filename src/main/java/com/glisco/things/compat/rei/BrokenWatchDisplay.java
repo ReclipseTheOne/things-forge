@@ -5,12 +5,10 @@ import me.shedaniel.rei.api.common.category.CategoryIdentifier;
 import me.shedaniel.rei.api.common.display.Display;
 import me.shedaniel.rei.api.common.entry.EntryIngredient;
 import me.shedaniel.rei.api.common.util.EntryIngredients;
-import net.minecraft.item.Items;
-
+import net.minecraft.world.item.Items;
 import java.util.List;
 
 public class BrokenWatchDisplay implements Display {
-
     private final List<EntryIngredient> inputs = List.of(
             EntryIngredients.of(Items.LEATHER),
             EntryIngredients.of(Items.CLOCK),

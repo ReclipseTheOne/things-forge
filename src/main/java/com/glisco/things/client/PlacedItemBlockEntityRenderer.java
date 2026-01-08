@@ -2,68 +2,68 @@ package com.glisco.things.client;
 
 import com.glisco.things.blocks.PlacedItemBlockEntity;
 import com.glisco.things.blocks.ThingsBlocks;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.block.entity.BlockEntityRenderer;
-import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;
-import net.minecraft.client.render.model.BakedModel;
-import net.minecraft.client.render.model.json.ModelTransformationMode;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.state.property.Properties;
-import net.minecraft.util.math.RotationAxis;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.resources.model.BakedModel;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 public class PlacedItemBlockEntityRenderer implements BlockEntityRenderer<PlacedItemBlockEntity> {
 
-    public PlacedItemBlockEntityRenderer(BlockEntityRendererFactory.Context context) {}
+    public PlacedItemBlockEntityRenderer(BlockEntityRendererProvider.Context context) {}
 
     @Override
-    public void render(PlacedItemBlockEntity entity, float tickDelta, MatrixStack matrixStack, VertexConsumerProvider vertexConsumers, int light, int overlay) {
+    public void render(PlacedItemBlockEntity entity, float tickDelta, PoseStack matrixStack, MultiBufferSource vertexConsumers, int light, int overlay) {
         ItemStack item = entity.getItem();
-        BakedModel itemModel = MinecraftClient.getInstance().getItemRenderer().getModel(item, null, null, 0);
+        BakedModel itemModel = Minecraft.getInstance().getItemRenderer().getModel(item, null, null, 0);
 
         float scaleFactor = item.getItem() instanceof BlockItem ? 0.5f : 0.4f;
 
-        if (!entity.getWorld().getBlockState(entity.getPos()).isOf(ThingsBlocks.PLACED_ITEM)) return;
+        if (!entity.getLevel().getBlockState(entity.getBlockPos()).is(ThingsBlocks.PLACED_ITEM)) return;
 
-        matrixStack.push();
-        switch (entity.getWorld().getBlockState(entity.getPos()).get(Properties.FACING)) {
+        matrixStack.pushPose();
+        switch (entity.getLevel().getBlockState(entity.getBlockPos()).getValue(BlockStateProperties.FACING)) {
             case UP -> {
                 matrixStack.translate(0.5, 0.97, 0.5);
-                matrixStack.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(180));
-                matrixStack.multiply(RotationAxis.NEGATIVE_Y.rotationDegrees(entity.getRotation() * 45));
+                matrixStack.mulPose(Axis.ZP.rotationDegrees(180));
+                matrixStack.mulPose(Axis.YN.rotationDegrees(entity.getRotation() * 45));
             }
             case DOWN -> {
                 matrixStack.translate(0.5, 0.03, 0.5);
-                matrixStack.multiply(RotationAxis.NEGATIVE_Y.rotationDegrees(entity.getRotation() * 45));
+                matrixStack.mulPose(Axis.YN.rotationDegrees(entity.getRotation() * 45));
             }
             case EAST -> {
                 matrixStack.translate(0.97, 0.5, 0.5);
-                matrixStack.multiply(RotationAxis.NEGATIVE_X.rotationDegrees(90 - entity.getRotation() * 45));
-                matrixStack.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(90));
+                matrixStack.mulPose(Axis.XN.rotationDegrees(90 - entity.getRotation() * 45));
+                matrixStack.mulPose(Axis.ZP.rotationDegrees(90));
             }
             case WEST -> {
                 matrixStack.translate(0.03, 0.5, 0.5);
-                matrixStack.multiply(RotationAxis.NEGATIVE_X.rotationDegrees(90 + entity.getRotation() * 45));
-                matrixStack.multiply(RotationAxis.NEGATIVE_Z.rotationDegrees(90));
+                matrixStack.mulPose(Axis.XN.rotationDegrees(90 + entity.getRotation() * 45));
+                matrixStack.mulPose(Axis.ZN.rotationDegrees(90));
             }
             case NORTH -> {
                 matrixStack.translate(0.5, 0.5, 0.03);
-                matrixStack.multiply(RotationAxis.NEGATIVE_X.rotationDegrees(90));
-                matrixStack.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(180));
-                matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-entity.getRotation() * 45));
+                matrixStack.mulPose(Axis.XN.rotationDegrees(90));
+                matrixStack.mulPose(Axis.ZP.rotationDegrees(180));
+                matrixStack.mulPose(Axis.YP.rotationDegrees(-entity.getRotation() * 45));
             }
             case SOUTH -> {
                 matrixStack.translate(0.5, 0.5, 0.97);
-                matrixStack.multiply(RotationAxis.NEGATIVE_X.rotationDegrees(90));
-                matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-entity.getRotation() * 45));
+                matrixStack.mulPose(Axis.XN.rotationDegrees(90));
+                matrixStack.mulPose(Axis.YP.rotationDegrees(-entity.getRotation() * 45));
             }
         }
         matrixStack.scale(scaleFactor, scaleFactor, scaleFactor);
-        matrixStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(90f));
-        MinecraftClient.getInstance().getItemRenderer().renderItem(item, ModelTransformationMode.FIXED, false, matrixStack, vertexConsumers, light, OverlayTexture.DEFAULT_UV, itemModel);
-        matrixStack.pop();
+        matrixStack.mulPose(Axis.XP.rotationDegrees(90f));
+        Minecraft.getInstance().getItemRenderer().render(item, ItemDisplayContext.FIXED, false, matrixStack, vertexConsumers, light, OverlayTexture.NO_OVERLAY, itemModel);
+        matrixStack.popPose();
     }
 }

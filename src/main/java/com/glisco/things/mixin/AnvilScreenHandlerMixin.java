@@ -3,13 +3,14 @@ package com.glisco.things.mixin;
 import com.glisco.things.Things;
 import com.glisco.things.items.ThingsItems;
 import com.glisco.things.mixin.access.ForgingScreenHandlerAccessor;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.UnbreakableComponent;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.screen.AnvilScreenHandler;
-import net.minecraft.screen.Property;
-import net.minecraft.text.Text;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AnvilMenu;
+import net.minecraft.world.inventory.DataSlot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.Unbreakable;
 import org.apache.commons.lang3.StringUtils;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -19,21 +20,21 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(AnvilScreenHandler.class)
+@Mixin(AnvilMenu.class)
 public class AnvilScreenHandlerMixin {
 
     @Shadow
     @Final
-    private Property levelCost;
+    private DataSlot levelCost;
 
     @Shadow
     private String newItemName;
 
     @Inject(method = "canTakeOutput", at = @At("HEAD"), cancellable = true)
-    public void outputCheckOverride(PlayerEntity player, boolean present, CallbackInfoReturnable<Boolean> cir) {
+    public void outputCheckOverride(Player player, boolean present, CallbackInfoReturnable<Boolean> cir) {
         ForgingScreenHandlerAccessor handler = (ForgingScreenHandlerAccessor) this;
 
-        if (!handler.things$getInput().getStack(1).getItem().equals(ThingsItems.HARDENING_CATALYST)) return;
+        if (!handler.things$getInput().getItem(1).getItem().equals(ThingsItems.HARDENING_CATALYST)) return;
 
         cir.setReturnValue(levelCost.get() <= player.experienceLevel);
         cir.cancel();
@@ -44,23 +45,23 @@ public class AnvilScreenHandlerMixin {
         ForgingScreenHandlerAccessor forgingHandler = (ForgingScreenHandlerAccessor) this;
 
         final var inputInventory = forgingHandler.things$getInput();
-        if (!inputInventory.getStack(1).getItem().equals(ThingsItems.HARDENING_CATALYST)) return;
+        if (!inputInventory.getItem(1).getItem().equals(ThingsItems.HARDENING_CATALYST)) return;
 
-        final var baseStack = inputInventory.getStack(0);
+        final var baseStack = inputInventory.getItem(0);
 
-        if (!baseStack.getItem().getComponents().contains(DataComponentTypes.MAX_DAMAGE) || baseStack.isIn(Things.HARDENING_CATALYST_BLACKLIST)) return;
-        if (baseStack.contains(DataComponentTypes.UNBREAKABLE)) return;
+        if (!baseStack.getItem().components().has(DataComponents.MAX_DAMAGE) || baseStack.is(Things.HARDENING_CATALYST_BLACKLIST)) return;
+        if (baseStack.has(DataComponents.UNBREAKABLE)) return;
 
         ItemStack newOutput = baseStack.copy();
-        newOutput.set(DataComponentTypes.UNBREAKABLE, new UnbreakableComponent(true));
+        newOutput.set(DataComponents.UNBREAKABLE, new Unbreakable(true));
 
         if (!StringUtils.isBlank(newItemName)) {
-            newOutput.set(DataComponentTypes.CUSTOM_NAME, Text.literal(newItemName));
+            newOutput.set(DataComponents.CUSTOM_NAME, Component.literal(newItemName));
         } else {
-            newOutput.remove(DataComponentTypes.CUSTOM_DATA);
+            newOutput.remove(DataComponents.CUSTOM_DATA);
         }
 
-        forgingHandler.things$getOutput().setStack(0, newOutput);
+        forgingHandler.things$getOutput().setItem(0, newOutput);
         levelCost.set(30);
 
         ci.cancel();

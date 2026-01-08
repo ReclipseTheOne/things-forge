@@ -2,7 +2,8 @@
   "required": true,
   "minVersion": "0.8",
   "package": "com.glisco.things.mixin",
-  "compatibilityLevel": "JAVA_8",
+  "compatibilityLevel": "JAVA_21",
+  "refmap": "things.refmap.json",
   "mixins": [
     "AbstractBlockStateMixin",
     "AnvilScreenHandlerMixin",

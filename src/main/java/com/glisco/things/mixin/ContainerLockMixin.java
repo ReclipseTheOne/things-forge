@@ -1,8 +1,8 @@
 package com.glisco.things.mixin;
 
 import com.glisco.things.items.generic.ContainerKeyItem;
-import net.minecraft.inventory.ContainerLock;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.LockCode;
+import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(ContainerLock.class)
+@Mixin(LockCode.class)
 public class ContainerLockMixin {
 
     @Shadow

@@ -6,29 +6,28 @@ import com.glisco.things.items.trinkets.*;
 import com.glisco.things.mixin.access.ItemAccessor;
 import io.wispforest.accessories.Accessories;
 import io.wispforest.accessories.api.AccessoriesAPI;
-import io.wispforest.lavender.book.LavenderBookItem;
-import io.wispforest.owo.itemgroup.OwoItemSettings;
+import io.wispforest.owo.itemgroup.OwoItemSettingsExtension;
 import io.wispforest.owo.ops.TextOps;
 import io.wispforest.owo.registration.annotations.IterationIgnored;
 import io.wispforest.owo.registration.reflect.ItemRegistryContainer;
 import io.wispforest.owo.util.TagInjector;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.registry.Registries;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Rarity;
-
 import java.util.List;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.Rarity;
+import net.minecraft.world.item.TooltipFlag;
+import top.theillusivec4.curios.api.CuriosApi;
 
 @SuppressWarnings("unused")
 public class ThingsItems implements ItemRegistryContainer {
 
-    @IterationIgnored
-    public static final Item THINGS_ALMANAC = LavenderBookItem.registerForBook(Things.id("almanac"), Things.id("things_almanac"), new OwoItemSettings().group(Things.THINGS_GROUP).maxCount(1));
+//    @IterationIgnored
+//    public static final Item THINGS_ALMANAC = LavenderBookItem.registerForBook(Things.id("almanac"), Things.id("things_almanac"), ((OwoItemSettingsExtension) new Item.Properties()).group(() -> Things.THINGS_GROUP).stacksTo(1));
 
     public static final Item RECALL_POTION = new RecallPotionItem();
     public static final Item CONTAINER_KEY = new ContainerKeyItem();
@@ -39,7 +38,7 @@ public class ThingsItems implements ItemRegistryContainer {
     public static final Item MOSS_NECKLACE = new MossNecklaceItem();
     public static final Item PLACEBO = new PlaceboItem();
     public static final Item DISPLACEMENT_TOME = new DisplacementTomeItem();
-    public static final Item DISPLACEMENT_PAGE = new Item(new OwoItemSettings().group(Things.THINGS_GROUP).maxCount(8));
+    public static final Item DISPLACEMENT_PAGE = new Item(((OwoItemSettingsExtension) new Item.Properties()).group(() -> Things.THINGS_GROUP).stacksTo(8));
     public static final Item MINING_GLOVES = new MiningGlovesItem();
     public static final Item RIOT_GAUNTLET = new RiotGauntletItem();
     public static final Item INFERNAL_SCEPTER = new InfernalScepterItem();
@@ -63,8 +62,8 @@ public class ThingsItems implements ItemRegistryContainer {
     @Override
     public void afterFieldProcessing() {
         if (Things.CONFIG.appleTrinket()) {
-            AccessoriesAPI.registerAccessory(Items.APPLE, new AppleTrinket());
-            TagInjector.inject(Registries.ITEM, Identifier.of(Accessories.MODID, "face"), Items.APPLE);
+	        AccessoriesAPI.registerAccessory(Items.APPLE, new AppleTrinket());
+            TagInjector.inject(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(Accessories.MODID, "face"), Items.APPLE);
         }
 
         BaterWucketItem.registerCauldronBehavior();
@@ -75,29 +74,29 @@ public class ThingsItems implements ItemRegistryContainer {
 
     private static final class GleamingItem extends Item {
         public GleamingItem() {
-            super(new OwoItemSettings().group(Things.THINGS_GROUP).rarity(Rarity.UNCOMMON));
+            super(((OwoItemSettingsExtension) new Item.Properties()).group(() -> Things.THINGS_GROUP).rarity(Rarity.UNCOMMON));
         }
 
         @Override
-        public void appendTooltip(ItemStack stack, TooltipContext context, List<Text> tooltip, TooltipType type) {
-            tooltip.add(TextOps.translateWithColor("text.things.crafting_component", TextOps.color(Formatting.GRAY)));
+        public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag type) {
+            tooltip.add(TextOps.translateWithColor("text.things.crafting_component", TextOps.color(ChatFormatting.GRAY)));
         }
     }
 
     private static final class HardeningCatalystItem extends ItemWithExtendableTooltip {
         public HardeningCatalystItem() {
-            super(new OwoItemSettings().group(Things.THINGS_GROUP).maxCount(1).rarity(Rarity.UNCOMMON).fireproof());
+            super(((OwoItemSettingsExtension) new Item.Properties()).group(() -> Things.THINGS_GROUP).stacksTo(1).rarity(Rarity.UNCOMMON).fireResistant());
         }
 
         @Override
-        public boolean hasGlint(ItemStack stack) {
+        public boolean isFoil(ItemStack stack) {
             return true;
         }
     }
 
     private static final class EmptyAgglomerationItem extends ItemWithExtendableTooltip {
         public EmptyAgglomerationItem() {
-            super(new OwoItemSettings().group(Things.THINGS_GROUP).maxCount(1).rarity(Rarity.UNCOMMON));
+            super(((OwoItemSettingsExtension) new Item.Properties()).group(() -> Things.THINGS_GROUP).stacksTo(1).rarity(Rarity.UNCOMMON));
         }
     }
 }

@@ -3,25 +3,35 @@ package com.glisco.things.misc;
 import com.glisco.things.Things;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.registry.RegistryWrapper;
-import org.jetbrains.annotations.NotNull;
-import org.ladysnake.cca.api.v3.component.Component;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.common.util.INBTSerializable;
+import org.jetbrains.annotations.UnknownNullability;
 
-public class SockDataComponent implements Component {
-
-    private final PlayerEntity bearer;
+/**
+ * Stores sock-related data for players using NeoForge's attachment system.
+ */
+public class SockDataComponent implements INBTSerializable<CompoundTag> {
+    private Player bearer;
 
     public boolean jumpySocksEquipped = false;
 
     private float speedModification = 0;
     private final Int2IntMap sockSpeeds = new Int2IntOpenHashMap();
 
-    public SockDataComponent(PlayerEntity bearer) {
+    public SockDataComponent() {
+        // Default constructor for attachment creation
+    }
+
+    public SockDataComponent(Player bearer) {
+        this.bearer = bearer;
+    }
+
+    public void setBearer(Player bearer) {
         this.bearer = bearer;
     }
 
@@ -35,17 +45,17 @@ public class SockDataComponent implements Component {
     }
 
     public void modifySpeed(float amount) {
-        if (amount == 0) return;
+        if (amount == 0 || bearer == null) return;
 
-        float cleanWalkSpeed = bearer.getAbilities().getWalkSpeed() - speedModification;
+        float cleanWalkSpeed = bearer.getAbilities().getWalkingSpeed() - speedModification;
         speedModification += amount;
         if (speedModification < 0) speedModification = 0;
 
         final var modifiedSpeed = cleanWalkSpeed + speedModification;
 
-        bearer.getAbilities().setWalkSpeed(modifiedSpeed);
-        bearer.getAttributeInstance(EntityAttributes.GENERIC_MOVEMENT_SPEED).setBaseValue(modifiedSpeed);
-        bearer.sendAbilitiesUpdate();
+        bearer.getAbilities().setWalkingSpeed(modifiedSpeed);
+        bearer.getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(modifiedSpeed);
+        bearer.onUpdateAbilities();
     }
 
     public void setModifier(float target) {
@@ -57,27 +67,29 @@ public class SockDataComponent implements Component {
     }
 
     @Override
-    public void readFromNbt(NbtCompound tag, RegistryWrapper.@NotNull WrapperLookup registries) {
-        this.speedModification = tag.getFloat("SpeedModification");
-
-        this.sockSpeeds.clear();
-        tag.getList("SockSpeeds", NbtElement.COMPOUND_TYPE).forEach(element -> {
-            var nbt = (NbtCompound) element;
-            this.sockSpeeds.put(nbt.getInt("Slot"), nbt.getInt("Speed"));
-        });
-    }
-
-    @Override
-    public void writeToNbt(NbtCompound tag, RegistryWrapper.@NotNull WrapperLookup registries) {
+    public CompoundTag serializeNBT(HolderLookup.Provider provider) {
+        CompoundTag tag = new CompoundTag();
         tag.putFloat("SpeedModification", speedModification);
 
-        var list = new NbtList();
+        var list = new ListTag();
         this.sockSpeeds.forEach((slot, speed) -> {
-            var nbt = new NbtCompound();
+            var nbt = new CompoundTag();
             nbt.putInt("Slot", slot);
             nbt.putInt("Speed", speed);
             list.add(nbt);
         });
         tag.put("SockSpeeds", list);
+        return tag;
+    }
+
+    @Override
+    public void deserializeNBT(HolderLookup.Provider provider, CompoundTag tag) {
+        this.speedModification = tag.getFloat("SpeedModification");
+
+        this.sockSpeeds.clear();
+        tag.getList("SockSpeeds", Tag.TAG_COMPOUND).forEach(element -> {
+            var nbt = (CompoundTag) element;
+            this.sockSpeeds.put(nbt.getInt("Slot"), nbt.getInt("Speed"));
+        });
     }
 }

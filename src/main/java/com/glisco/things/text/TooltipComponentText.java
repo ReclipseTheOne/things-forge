@@ -1,12 +1,15 @@
 package com.glisco.things.text;
 
-import net.minecraft.client.gui.tooltip.TooltipComponent;
-import net.minecraft.item.tooltip.TooltipData;
-import net.minecraft.text.*;
-
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentContents;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.contents.PlainTextContents;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.FormattedCharSink;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import java.util.List;
 
-public record TooltipComponentText(TooltipData tooltipData) implements Text {
+public record TooltipComponentText(TooltipComponent tooltipData) implements Component {
 
     @Override
     public Style getStyle() {
@@ -14,23 +17,23 @@ public record TooltipComponentText(TooltipData tooltipData) implements Text {
     }
 
     @Override
-    public TextContent getContent() {
-        return PlainTextContent.EMPTY;
+    public ComponentContents getContents() {
+        return PlainTextContents.EMPTY;
     }
 
     @Override
-    public List<Text> getSiblings() {
+    public List<Component> getSiblings() {
         return List.of();
     }
 
     @Override
-    public OrderedText asOrderedText() {
+    public FormattedCharSequence getVisualOrderText() {
         return new TooltipDataAsOrderedText(tooltipData());
     }
 
-    public record TooltipDataAsOrderedText(TooltipData tooltipData) implements OrderedText {
+    public record TooltipDataAsOrderedText(TooltipComponent tooltipData) implements FormattedCharSequence {
         @Override
-        public boolean accept(CharacterVisitor visitor) {
+        public boolean accept(FormattedCharSink visitor) {
             return false;
         }
     }

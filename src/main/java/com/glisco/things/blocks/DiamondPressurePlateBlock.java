@@ -1,34 +1,33 @@
 package com.glisco.things.blocks;
 
-import net.fabricmc.fabric.api.object.builder.v1.block.FabricBlockSettings;
-import net.minecraft.block.BlockSetType;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.MapColor;
-import net.minecraft.block.PressurePlateBlock;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.sound.BlockSoundGroup;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.world.World;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.PressurePlateBlock;
+import net.minecraft.world.level.block.SoundType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.properties.BlockSetType;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.material.MapColor;
+import net.minecraft.world.phys.AABB;
 import java.util.List;
 
 public class DiamondPressurePlateBlock extends PressurePlateBlock {
 
     protected DiamondPressurePlateBlock() {
-        super(BlockSetType.IRON,
-                FabricBlockSettings.copyOf(Blocks.HEAVY_WEIGHTED_PRESSURE_PLATE).sounds(BlockSoundGroup.METAL).mapColor(MapColor.DIAMOND_BLUE));
+        super(BlockSetType.IRON, BlockBehaviour.Properties.ofFullCopy(Blocks.HEAVY_WEIGHTED_PRESSURE_PLATE).sound(SoundType.METAL).mapColor(MapColor.DIAMOND));
     }
 
     @Override
-    protected int getRedstoneOutput(World world, BlockPos pos) {
-        Box box = BOX.offset(pos);
-        List<PlayerEntity> entities = world.getNonSpectatingEntities(PlayerEntity.class, box);
+    protected int getSignalStrength(Level world, BlockPos pos) {
+        AABB box = TOUCH_AABB.move(pos);
+        List<Player> entities = world.getEntitiesOfClass(Player.class, box);
 
         if (!entities.isEmpty()) {
             for (Entity entity : entities) {
-                if (!entity.canAvoidTraps()) {
+                if (!entity.isIgnoringBlockTriggers()) {
                     return 15;
                 }
             }

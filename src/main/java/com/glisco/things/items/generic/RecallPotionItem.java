@@ -1,71 +1,71 @@
 package com.glisco.things.items.generic;
 
 import com.glisco.things.Things;
-import io.wispforest.owo.itemgroup.OwoItemSettings;
-import net.minecraft.advancement.criterion.Criteria;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ItemUsage;
-import net.minecraft.item.Items;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
-import net.minecraft.util.TypedActionResult;
-import net.minecraft.util.UseAction;
-import net.minecraft.world.TeleportTarget;
-import net.minecraft.world.World;
+import io.wispforest.owo.itemgroup.OwoItemSettingsExtension;
+import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUtils;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.UseAnim;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.portal.DimensionTransition;
 
 public class RecallPotionItem extends Item {
 
     public RecallPotionItem() {
-        super(new OwoItemSettings().group(Things.THINGS_GROUP).maxCount(16));
+        super(((OwoItemSettingsExtension) new Item.Properties()).group(() -> Things.THINGS_GROUP).stacksTo(16));
     }
 
     @Override
-    public int getMaxUseTime(ItemStack stack, LivingEntity user) {
+    public int getUseDuration(ItemStack stack, LivingEntity user) {
         return 15;
     }
 
     @Override
-    public UseAction getUseAction(ItemStack stack) {
-        return UseAction.DRINK;
+    public UseAnim getUseAnimation(ItemStack stack) {
+        return UseAnim.DRINK;
     }
 
     @Override
-    public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
-        return ItemUsage.consumeHeldItem(world, user, hand);
+    public InteractionResultHolder<ItemStack> use(Level world, Player user, InteractionHand hand) {
+        return ItemUtils.startUsingInstantly(world, user, hand);
     }
 
     @Override
-    public boolean hasGlint(ItemStack stack) {
+    public boolean isFoil(ItemStack stack) {
         return true;
     }
 
     @Override
-    public ItemStack finishUsing(ItemStack stack, World world, LivingEntity user) {
-        var player = user instanceof PlayerEntity ? (PlayerEntity) user : null;
+    public ItemStack finishUsingItem(ItemStack stack, Level world, LivingEntity user) {
+        var player = user instanceof Player ? (Player) user : null;
         if (player == null) return stack;
 
-        if (player instanceof ServerPlayerEntity serverPlayer) {
+        if (player instanceof ServerPlayer serverPlayer) {
 
-            Criteria.CONSUME_ITEM.trigger(serverPlayer, stack);
+            CriteriaTriggers.CONSUME_ITEM.trigger(serverPlayer, stack);
 
-            if (serverPlayer.getSpawnPointPosition() != null) {
-                var respawnPos = ((ServerPlayerEntity) player).getRespawnTarget(false, TeleportTarget.NO_OP);
-                player.teleportTo(respawnPos);
+            if (serverPlayer.getRespawnPosition() != null) {
+                var respawnPos = ((ServerPlayer) player).findRespawnPositionAndUseSpawnBlock(false, DimensionTransition.DO_NOTHING);
+                player.changeDimension(respawnPos);
 
-                if (!player.getAbilities().creativeMode) {
-                    stack.decrement(1);
+                if (!player.getAbilities().instabuild) {
+                    stack.shrink(1);
                     if (stack.isEmpty()) {
                         stack = new ItemStack(Items.GLASS_BOTTLE);
                     } else {
-                        player.getInventory().offerOrDrop(new ItemStack(Items.GLASS_BOTTLE));
+                        player.getInventory().placeItemBackInInventory(new ItemStack(Items.GLASS_BOTTLE));
                     }
                 }
             } else {
-                serverPlayer.sendMessage(Text.literal("No respawn point"), true);
+                serverPlayer.displayClientMessage(Component.literal("No respawn point"), true);
             }
         }
 

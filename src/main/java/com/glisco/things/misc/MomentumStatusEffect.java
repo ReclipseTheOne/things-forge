@@ -1,12 +1,12 @@
 package com.glisco.things.misc;
 
-import net.minecraft.entity.effect.StatusEffect;
-import net.minecraft.entity.effect.StatusEffectCategory;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectCategory;
 
-public class MomentumStatusEffect extends StatusEffect {
+public class MomentumStatusEffect extends MobEffect {
 
     public MomentumStatusEffect() {
-        super(StatusEffectCategory.BENEFICIAL, 0xe8c170);
+        super(MobEffectCategory.BENEFICIAL, 0xe8c170);
     }
 
 }

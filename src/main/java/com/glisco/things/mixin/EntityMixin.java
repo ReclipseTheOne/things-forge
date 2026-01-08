@@ -2,14 +2,6 @@ package com.glisco.things.mixin;
 
 import com.glisco.things.Things;
 import com.glisco.things.items.ThingsItems;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.MovementType;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -19,18 +11,29 @@ import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 
 @Mixin(Entity.class)
 public abstract class EntityMixin {
 
     @Shadow
-    public abstract Vec3d getPos();
+    public abstract Vec3 getPos();
 
     @Shadow
     public abstract boolean isRemoved();
 
     @Shadow
-    public World world;
+    public Level world;
 
     @Shadow
     public abstract BlockPos getBlockPos();
@@ -49,25 +52,25 @@ public abstract class EntityMixin {
 
     @SuppressWarnings("ConstantConditions")
     @Inject(method = "move", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/Vec3d;lengthSquared()D", ordinal = 1), locals = LocalCapture.CAPTURE_FAILHARD)
-    private void pistonCrushing(MovementType movementType, Vec3d movement, CallbackInfo ci, Vec3d vec3d) {
+    private void pistonCrushing(MoverType movementType, Vec3 movement, CallbackInfo ci, Vec3 vec3d) {
         if (!((Object) this instanceof ItemEntity itemEntity)) return;
 
-        if (movementType != MovementType.PISTON) return;
-        if (vec3d.lengthSquared() != 0) return;
+        if (movementType != MoverType.PISTON) return;
+        if (vec3d.lengthSqr() != 0) return;
         if (this.isRemoved()) return;
 
-        final var thisItem = itemEntity.getStack().getItem();
+        final var thisItem = itemEntity.getItem().getItem();
         if (!Things.brokenWatchRecipe().contains(thisItem)) return;
         final var recipe = new ArrayList<>(Things.brokenWatchRecipe());
 
         recipe.remove(thisItem);
-        int craftCount = itemEntity.getStack().getCount();
+        int craftCount = itemEntity.getItem().getCount();
 
-        final var items = this.world.getEntitiesByClass(ItemEntity.class, new Box(this.getBlockPos()), ItemEntity::isAlive);
+        final var items = this.world.getEntitiesOfClass(ItemEntity.class, new AABB(this.getBlockPos()), ItemEntity::isAlive);
         final var craftingParticipants = new ArrayList<>(Collections.singleton(itemEntity));
 
         for (var item : items) {
-            final var scrutinee = item.getStack();
+            final var scrutinee = item.getItem();
             if (recipe.contains(scrutinee.getItem())) {
                 recipe.remove(scrutinee.getItem());
 
@@ -78,14 +81,14 @@ public abstract class EntityMixin {
 
         if (recipe.isEmpty()) {
             for (var item : craftingParticipants) {
-                final var stack = item.getStack();
-                stack.decrement(craftCount);
+                final var stack = item.getItem();
+                stack.shrink(craftCount);
 
                 if (stack.isEmpty()) item.discard();
             }
 
             for (int i = 0; i < craftCount; i++) {
-                this.world.spawnEntity(new ItemEntity(this.world, this.getX(), this.getY(), this.getZ(), ThingsItems.BROKEN_WATCH.getDefaultStack()));
+                this.world.addFreshEntity(new ItemEntity(this.world, this.getX(), this.getY(), this.getZ(), ThingsItems.BROKEN_WATCH.getDefaultInstance()));
             }
         }
     }

@@ -3,23 +3,24 @@ package com.glisco.things.items.trinkets;
 import com.glisco.things.Things;
 import com.glisco.things.items.TrinketItemWithOptionalTooltip;
 import io.wispforest.accessories.api.slot.SlotReference;
-import io.wispforest.owo.itemgroup.OwoItemSettings;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.network.ServerPlayerEntity;
+import io.wispforest.owo.itemgroup.OwoItemSettingsExtension;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 
 public class RiotGauntletItem extends TrinketItemWithOptionalTooltip {
 
     public RiotGauntletItem() {
-        super(new OwoItemSettings().maxCount(1).group(Things.THINGS_GROUP));
+        super(((OwoItemSettingsExtension) new Item.Properties().stacksTo(1)).group(() -> Things.THINGS_GROUP));
     }
 
     @Override
     public void tick(ItemStack stack, SlotReference reference) {
-        if (!(reference.entity() instanceof ServerPlayerEntity player)) return;
+        if (!(reference.entity() instanceof ServerPlayer player)) return;
 
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.STRENGTH, 5,
+        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 5,
                 Things.CONFIG.effectLevels.riotGauntletStrength() - 1, true, false, true));
     }
 

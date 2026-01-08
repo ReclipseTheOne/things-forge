@@ -5,33 +5,33 @@ import com.glisco.things.items.ThingsItems;
 import com.glisco.things.items.trinkets.AgglomerationItem;
 import io.wispforest.accessories.api.AccessoriesAPI;
 import io.wispforest.accessories.api.AccessoryNest;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.SpecialCraftingRecipe;
-import net.minecraft.recipe.SpecialRecipeSerializer;
-import net.minecraft.recipe.book.CraftingRecipeCategory;
-import net.minecraft.recipe.input.CraftingRecipeInput;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.world.World;
-
+import io.wispforest.accessories.api.slot.SlotType;
+import java.util.Collection;
 import java.util.function.Predicate;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.CustomRecipe;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer;
+import net.minecraft.world.level.Level;
 
-public class AgglomerateRecipe extends SpecialCraftingRecipe {
-    public AgglomerateRecipe(CraftingRecipeCategory category) {
+public class AgglomerateRecipe extends CustomRecipe {
+    public AgglomerateRecipe(CraftingBookCategory category) {
         super(category);
     }
 
     @Override
-    public boolean matches(CraftingRecipeInput input, World world) {
+    public boolean matches(CraftingInput input, Level world) {
         int totalItems = 0;
-        for (int i = 0; i < input.getSize(); i++) {
-            if (input.getStackInSlot(i).isEmpty()) continue;
+        for (int i = 0; i < input.size(); i++) {
+            if (input.getItem(i).isEmpty()) continue;
             totalItems++;
         }
         if (totalItems != 3) return false;
 
-        if (!matchOnce(input, stack -> stack.isOf(ThingsItems.EMPTY_AGGLOMERATION))) return false;
+        if (!matchOnce(input, stack -> stack.is(ThingsItems.EMPTY_AGGLOMERATION))) return false;
 
         ItemStack firstStack = matchOne(input, AgglomerateRecipe::isValidItem);
         if (firstStack == null) return false;
@@ -49,26 +49,26 @@ public class AgglomerateRecipe extends SpecialCraftingRecipe {
                 }
             }
 
-            return anyCompatibleSlot && !ItemStack.areItemsEqual(stack, firstStack) && isValidItem(stack);
+            return anyCompatibleSlot && !ItemStack.isSameItem(stack, firstStack) && isValidItem(stack);
         });
     }
 
     private static boolean isValidItem(ItemStack stack) {
-        return !stack.isEmpty() && !stack.isOf(ThingsItems.EMPTY_AGGLOMERATION)
+        return !stack.isEmpty() && !stack.is(ThingsItems.EMPTY_AGGLOMERATION)
                 && !(AccessoriesAPI.getAccessory(stack.getItem()) instanceof AccessoryNest)
-                && !stack.isIn(Things.AGGLOMERATION_BLACKLIST);
+                && !stack.is(Things.AGGLOMERATION_BLACKLIST);
     }
 
     @Override
-    public ItemStack craft(CraftingRecipeInput input, RegistryWrapper.WrapperLookup registries) {
-        ItemStack firstTrinket = matchOne(input, stack -> !stack.isEmpty() && !stack.isOf(ThingsItems.EMPTY_AGGLOMERATION));
-        ItemStack secondTrinket = matchOne(input, stack -> !stack.isEmpty() && stack != firstTrinket && !stack.isOf(ThingsItems.EMPTY_AGGLOMERATION));
+    public ItemStack assemble(CraftingInput input, HolderLookup.Provider registries) {
+        ItemStack firstTrinket = matchOne(input, stack -> !stack.isEmpty() && !stack.is(ThingsItems.EMPTY_AGGLOMERATION));
+        ItemStack secondTrinket = matchOne(input, stack -> !stack.isEmpty() && stack != firstTrinket && !stack.is(ThingsItems.EMPTY_AGGLOMERATION));
 
         return AgglomerationItem.createStack(firstTrinket, secondTrinket);
     }
 
     @Override
-    public boolean fits(int width, int height) {
+    public boolean canCraftInDimensions(int width, int height) {
         return false;
     }
 
@@ -77,11 +77,11 @@ public class AgglomerateRecipe extends SpecialCraftingRecipe {
         return Serializer.INSTANCE;
     }
 
-    private static boolean matchOnce(CraftingRecipeInput input, Predicate<ItemStack> condition) {
+    private static boolean matchOnce(CraftingInput input, Predicate<ItemStack> condition) {
         boolean found = false;
 
-        for (int i = 0; i < input.getSize(); i++) {
-            if (!condition.test(input.getStackInSlot(i))) continue;
+        for (int i = 0; i < input.size(); i++) {
+            if (!condition.test(input.getItem(i))) continue;
             if (found) return false;
 
             found = true;
@@ -90,9 +90,9 @@ public class AgglomerateRecipe extends SpecialCraftingRecipe {
         return found;
     }
 
-    private static ItemStack matchOne(CraftingRecipeInput input, Predicate<ItemStack> condition) {
-        for (int i = 0; i < input.getSize(); i++) {
-            ItemStack stack = input.getStackInSlot(i);
+    private static ItemStack matchOne(CraftingInput input, Predicate<ItemStack> condition) {
+        for (int i = 0; i < input.size(); i++) {
+            ItemStack stack = input.getItem(i);
 
             if (!condition.test(stack)) continue;
 
@@ -102,7 +102,7 @@ public class AgglomerateRecipe extends SpecialCraftingRecipe {
         return null;
     }
 
-    public static class Serializer extends SpecialRecipeSerializer<AgglomerateRecipe> {
+    public static class Serializer extends SimpleCraftingRecipeSerializer<AgglomerateRecipe> {
         public static final Serializer INSTANCE = new Serializer();
 
         private Serializer() {

@@ -4,39 +4,39 @@ import com.glisco.things.Things;
 import com.glisco.things.ThingsNetwork;
 import com.glisco.things.items.ThingsItems;
 import com.glisco.things.items.generic.DisplacementTomeItem;
+import com.google.common.collect.ImmutableMap;
 import io.wispforest.owo.client.screens.ScreenUtils;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.screen.ScreenHandlerListener;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Hand;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerListener;
+import net.minecraft.world.item.ItemStack;
 
-public class DisplacementTomeScreenHandler extends ScreenHandler {
+public class DisplacementTomeScreenHandler extends AbstractContainerMenu {
 
     private ItemStack book;
 
-    public DisplacementTomeScreenHandler(int syncId, PlayerInventory playerInventory) {
+    public DisplacementTomeScreenHandler(int syncId, Inventory playerInventory) {
         this(syncId, playerInventory, ItemStack.EMPTY);
     }
 
-    public DisplacementTomeScreenHandler(int syncId, PlayerInventory playerInventory, ItemStack book) {
+    public DisplacementTomeScreenHandler(int syncId, Inventory playerInventory, ItemStack book) {
         super(Things.DISPLACEMENT_TOME_SCREEN_HANDLER, syncId);
         this.book = book;
     }
 
     @Override
-    public void addListener(ScreenHandlerListener listener) {
-        super.addListener(listener);
+    public void addSlotListener(ContainerListener listener) {
+        super.addSlotListener(listener);
     }
 
     @Override
-    public boolean canUse(PlayerEntity player) {
-        return player.getStackInHand(Hand.MAIN_HAND).getItem() instanceof DisplacementTomeItem || player.getStackInHand(Hand.OFF_HAND).getItem() instanceof DisplacementTomeItem;
+    public boolean stillValid(Player player) {
+        return player.getItemInHand(InteractionHand.MAIN_HAND).getItem() instanceof DisplacementTomeItem || player.getItemInHand(InteractionHand.OFF_HAND).getItem() instanceof DisplacementTomeItem;
     }
 
     public void setBook(ItemStack book) {
@@ -44,11 +44,11 @@ public class DisplacementTomeScreenHandler extends ScreenHandler {
     }
 
     public void requestTeleport(String location) {
-        if (this.player() instanceof ServerPlayerEntity serverPlayer) {
+        if (this.player instanceof ServerPlayer serverPlayer) {
             int currentFuel = book.get(DisplacementTomeItem.FUEL);
 
             if (currentFuel < Things.CONFIG.displacementTomeFuelConsumption()) {
-                serverPlayer.playSound(SoundEvents.ENTITY_ENDERMAN_TELEPORT, 1, 0);
+                serverPlayer.playSound(SoundEvents.ENDERMAN_TELEPORT, 1, 0);
                 return;
             }
 
@@ -59,17 +59,17 @@ public class DisplacementTomeScreenHandler extends ScreenHandler {
             book.set(DisplacementTomeItem.FUEL, currentFuel);
 
             targets.get(location).teleportPlayer(serverPlayer);
-            serverPlayer.getWorld().playSound(null, serverPlayer.getBlockPos(), SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.MASTER, 1, 1);
-            serverPlayer.closeHandledScreen();
+            serverPlayer.level().playSound(null, serverPlayer.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.MASTER, 1, 1);
+            serverPlayer.closeContainer();
         } else {
             ThingsNetwork.CHANNEL.clientHandle().send(ActionPacket.teleport(location));
         }
     }
 
     public void addPoint(String name) {
-        if (this.player() instanceof ServerPlayerEntity player) {
-            player.getInventory().getStack(player.getInventory().getSlotWithStack(new ItemStack(ThingsItems.DISPLACEMENT_PAGE))).decrement(1);
-            sendContentUpdates();
+        if (this.player() instanceof ServerPlayer player) {
+            player.getInventory().getItem(player.getInventory().findSlotMatchingItem(new ItemStack(ThingsItems.DISPLACEMENT_PAGE))).shrink(1);
+            broadcastChanges();
             DisplacementTomeItem.storeTeleportTargetInBook(book,
                     DisplacementTomeItem.Target.fromPlayer(player), name, false);
             updateClient();
@@ -79,7 +79,7 @@ public class DisplacementTomeScreenHandler extends ScreenHandler {
     }
 
     public boolean deletePoint(String name) {
-        if (this.player() instanceof ServerPlayerEntity) {
+        if (this.player() instanceof ServerPlayer) {
             boolean result = DisplacementTomeItem.deletePoint(book, name);
             updateClient();
             return result;
@@ -90,7 +90,7 @@ public class DisplacementTomeScreenHandler extends ScreenHandler {
     }
 
     public boolean renamePoint(String data) {
-        if (this.player() instanceof ServerPlayerEntity) {
+        if (this.player() instanceof ServerPlayer) {
             boolean result = DisplacementTomeItem.rename(book, data);
             updateClient();
             return result;
@@ -109,15 +109,15 @@ public class DisplacementTomeScreenHandler extends ScreenHandler {
     }
 
     @Override
-    public boolean onButtonClick(PlayerEntity player, int id) {
-        if (!(player instanceof ServerPlayerEntity)) {
+    public boolean clickMenuButton(Player player, int id) {
+        if (!(player instanceof ServerPlayer)) {
             player.playSound(SoundEvents.UI_BUTTON_CLICK.value(), 1, 1);
         }
         return true;
     }
 
     @Override
-    public ItemStack quickMove(PlayerEntity player, int index) {
+    public ItemStack quickMoveStack(Player player, int index) {
         return ScreenUtils.handleSlotTransfer(this, index, 0);
     }
 

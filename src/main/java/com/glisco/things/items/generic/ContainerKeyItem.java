@@ -5,114 +5,115 @@ import com.glisco.things.items.ItemWithExtendableTooltip;
 import com.glisco.things.mixin.access.ContainerLockAccessor;
 import com.glisco.things.mixin.access.LockableContainerBlockEntityAccessor;
 import com.mojang.serialization.Codec;
-import io.wispforest.owo.itemgroup.OwoItemSettings;
-import net.minecraft.block.ChestBlock;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.ChestBlockEntity;
-import net.minecraft.block.entity.LockableContainerBlockEntity;
-import net.minecraft.block.enums.ChestType;
-import net.minecraft.component.ComponentType;
-import net.minecraft.entity.Entity;
-import net.minecraft.inventory.ContainerLock;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ItemUsageContext;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.state.property.Properties;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World;
+import io.wispforest.owo.itemgroup.OwoItemSettingsExtension;
+import net.minecraft.world.item.Item;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Registry;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.LockCode;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.ChestType;
 
 public class ContainerKeyItem extends ItemWithExtendableTooltip {
 
-    public static final ComponentType<Integer> LOCK = Registry.register(
-            Registries.DATA_COMPONENT_TYPE,
+    public static final DataComponentType<Integer> LOCK = Registry.register(
+            BuiltInRegistries.DATA_COMPONENT_TYPE,
             Things.id("container_key_lock"),
-            ComponentType.<Integer>builder()
-                    .codec(Codec.INT)
-                    .packetCodec(PacketCodecs.VAR_INT)
+            DataComponentType.<Integer>builder()
+                    .persistent(Codec.INT)
+                    .networkSynchronized(ByteBufCodecs.VAR_INT)
                     .build()
     );
 
     public ContainerKeyItem() {
-        super(new OwoItemSettings().group(Things.THINGS_GROUP).maxCount(1));
+        super(((OwoItemSettingsExtension) new Item.Properties()).group(() -> Things.THINGS_GROUP).stacksTo(1));
     }
 
     @Override
     @SuppressWarnings("ConstantConditions")
-    public ActionResult useOnBlock(ItemUsageContext context) {
-        if (!context.getPlayer().isSneaking()) return ActionResult.PASS;
+    public InteractionResult useOn(UseOnContext context) {
+        if (!context.getPlayer().isShiftKeyDown()) return InteractionResult.PASS;
 
-        createKey(context.getStack(), context.getWorld().random);
+        createKey(context.getItemInHand(), context.getLevel().random);
 
-        World world = context.getWorld();
-        BlockPos pos = context.getBlockPos();
-        ItemStack stack = context.getStack();
+        Level world = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        ItemStack stack = context.getItemInHand();
 
-        if (!(world.getBlockEntity(pos) instanceof LockableContainerBlockEntity)) return ActionResult.PASS;
+        if (!(world.getBlockEntity(pos) instanceof BaseContainerBlockEntity)) return InteractionResult.PASS;
 
         String existingLock = getExistingLock(world, pos);
 
         if (existingLock.isEmpty()) {
-            setLock((LockableContainerBlockEntity) world.getBlockEntity(pos), String.valueOf(stack.get(LOCK)));
+            setLock((BaseContainerBlockEntity) world.getBlockEntity(pos), String.valueOf(stack.get(LOCK)));
 
-            if (world.isClient) {
+            if (world.isClientSide) {
                 sendLockedState(context, true);
             }
 
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         } else if (existingLock.equals(String.valueOf(stack.get(LOCK)))) {
-            setLock((LockableContainerBlockEntity) world.getBlockEntity(pos), "");
+            setLock((BaseContainerBlockEntity) world.getBlockEntity(pos), "");
 
-            if (world.isClient) {
+            if (world.isClientSide) {
                 sendLockedState(context, false);
             }
 
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         } else {
 
-            if (world.isClient) {
-                context.getPlayer().playSound(SoundEvents.BLOCK_CHEST_LOCKED, 1, 1);
+            if (world.isClientSide) {
+                context.getPlayer().playSound(SoundEvents.CHEST_LOCKED, 1, 1);
 
-                MutableText containerName =
-                        (MutableText) ((LockableContainerBlockEntity) context.getWorld().getBlockEntity(context.getBlockPos())).getDisplayName();
-                context.getPlayer().sendMessage(containerName.append(Text.literal(" is locked with another key!")), true);
+                MutableComponent containerName =
+                        (MutableComponent) ((BaseContainerBlockEntity) context.getLevel().getBlockEntity(context.getClickedPos())).getDisplayName();
+                context.getPlayer().displayClientMessage(containerName.append(Component.literal(" is locked with another key!")), true);
             }
 
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         }
     }
 
     @Override
-    public void inventoryTick(ItemStack stack, World world, Entity entity, int slot, boolean selected) {
+    public void inventoryTick(ItemStack stack, Level world, Entity entity, int slot, boolean selected) {
         createKey(stack, world.random);
     }
 
     @Override
-    public void appendTooltip(ItemStack stack, TooltipContext context, List<Text> tooltip, TooltipType type) {
-        if (stack.contains(LOCK)) {
-            tooltip.add(Text.literal("§9Key: §7#" + Integer.toHexString(stack.get(LOCK))));
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag type) {
+        if (stack.has(LOCK)) {
+            tooltip.add(Component.literal("§9Key: §7#" + Integer.toHexString(stack.get(LOCK))));
         }
 
-        super.appendTooltip(stack, context, tooltip, type);
+        super.appendHoverText(stack, context, tooltip, type);
     }
 
-    private static void createKey(ItemStack stack, Random random) {
-        if (stack.contains(LOCK)) return;
+    private static void createKey(ItemStack stack, RandomSource random) {
+        if (stack.has(LOCK)) return;
         stack.set(LOCK, random.nextInt(200000));
     }
 
-    private static String getExistingLock(World world, BlockPos pos) {
+    private static String getExistingLock(Level world, BlockPos pos) {
         final var blockEntity = world.getBlockEntity(pos);
         String existingLock = getKey(blockEntity);
 
@@ -126,18 +127,18 @@ public class ContainerKeyItem extends ItemWithExtendableTooltip {
         return existingLock;
     }
 
-    private static void sendLockedState(ItemUsageContext ctx, boolean locked) {
-        ctx.getPlayer().playSound(SoundEvents.BLOCK_CHEST_LOCKED, 1, 1);
+    private static void sendLockedState(UseOnContext ctx, boolean locked) {
+        ctx.getPlayer().playSound(SoundEvents.CHEST_LOCKED, 1, 1);
 
-        MutableText containerName = (MutableText) ((LockableContainerBlockEntity) ctx.getWorld().getBlockEntity(ctx.getBlockPos())).getDisplayName();
-        ctx.getPlayer().sendMessage(containerName.append(Text.literal(locked ? " locked!" : " unlocked!")), true);
+        MutableComponent containerName = (MutableComponent) ((BaseContainerBlockEntity) ctx.getLevel().getBlockEntity(ctx.getClickedPos())).getDisplayName();
+        ctx.getPlayer().displayClientMessage(containerName.append(Component.literal(locked ? " locked!" : " unlocked!")), true);
     }
 
-    private static void setLock(LockableContainerBlockEntity entity, String lock) {
-        NbtCompound lockNbt = new NbtCompound();
+    private static void setLock(BaseContainerBlockEntity entity, String lock) {
+        CompoundTag lockNbt = new CompoundTag();
         lockNbt.putString("Lock", lock);
 
-        ContainerLock containerLock = lock.isEmpty() ? ContainerLock.EMPTY : ContainerLock.fromNbt(lockNbt);
+        LockCode containerLock = lock.isEmpty() ? LockCode.NO_LOCK : LockCode.fromTag(lockNbt);
 
         ((LockableContainerBlockEntityAccessor) entity).things$setLock(containerLock);
         final var doubleChestNeighbor = maybeGetOtherChest(entity);
@@ -153,7 +154,7 @@ public class ContainerKeyItem extends ItemWithExtendableTooltip {
     @SuppressWarnings("ConstantConditions")
     private static @Nullable ChestBlockEntity maybeGetOtherChest(BlockEntity potentialChest) {
         if (!(potentialChest instanceof ChestBlockEntity)) return null;
-        if (potentialChest.getCachedState().get(Properties.CHEST_TYPE) == ChestType.SINGLE) return null;
-        return (ChestBlockEntity) potentialChest.getWorld().getBlockEntity(potentialChest.getPos().offset(ChestBlock.getFacing(potentialChest.getCachedState())));
+        if (potentialChest.getBlockState().getValue(BlockStateProperties.CHEST_TYPE) == ChestType.SINGLE) return null;
+        return (ChestBlockEntity) potentialChest.getLevel().getBlockEntity(potentialChest.getBlockPos().relative(ChestBlock.getConnectedDirection(potentialChest.getBlockState())));
     }
 }

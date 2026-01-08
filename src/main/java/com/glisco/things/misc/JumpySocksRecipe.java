@@ -2,39 +2,39 @@ package com.glisco.things.misc;
 
 import com.glisco.things.items.ThingsItems;
 import com.glisco.things.items.trinkets.SocksItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.recipe.RecipeSerializer;
-import net.minecraft.recipe.RecipeType;
-import net.minecraft.recipe.SpecialCraftingRecipe;
-import net.minecraft.recipe.SpecialRecipeSerializer;
-import net.minecraft.recipe.book.CraftingRecipeCategory;
-import net.minecraft.recipe.input.CraftingRecipeInput;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.world.World;
-
 import java.util.function.Predicate;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.CraftingBookCategory;
+import net.minecraft.world.item.crafting.CraftingInput;
+import net.minecraft.world.item.crafting.CustomRecipe;
+import net.minecraft.world.item.crafting.RecipeSerializer;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.crafting.SimpleCraftingRecipeSerializer;
+import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.NotNull;
 
-public class JumpySocksRecipe extends SpecialCraftingRecipe {
+public class JumpySocksRecipe extends CustomRecipe {
 
-    public JumpySocksRecipe(CraftingRecipeCategory category) {
+    public JumpySocksRecipe(CraftingBookCategory category) {
         super(category);
     }
 
     @Override
-    public boolean matches(CraftingRecipeInput input, World world) {
-        if (!matchOnce(input, stack -> stack.isOf(ThingsItems.GLEAMING_COMPOUND))) return false;
-        if (!matchOnce(input, stack -> stack.isOf(ThingsItems.RABBIT_FOOT_CHARM))) return false;
+    public boolean matches(CraftingInput input, Level world) {
+        if (!matchOnce(input, stack -> stack.is(ThingsItems.GLEAMING_COMPOUND))) return false;
+        if (!matchOnce(input, stack -> stack.is(ThingsItems.RABBIT_FOOT_CHARM))) return false;
 
-        return matchOnce(input, stack -> stack.isOf(ThingsItems.SOCKS) && !stack.contains(SocksItem.JUMPY_AND_ENABLED));
+        return matchOnce(input, stack -> stack.is(ThingsItems.SOCKS) && !stack.has(SocksItem.JUMPY_AND_ENABLED));
     }
 
     @Override
-    public ItemStack craft(CraftingRecipeInput input, RegistryWrapper.WrapperLookup lookup) {
+    public @NotNull ItemStack assemble(CraftingInput input, HolderLookup.Provider lookup) {
         ItemStack socc = null;
 
-        for (int i = 0; i < input.getSize(); i++) {
-            final var stack = input.getStackInSlot(i);
-            if (!stack.isOf(ThingsItems.SOCKS)) continue;
+        for (int i = 0; i < input.size(); i++) {
+            final var stack = input.getItem(i);
+            if (!stack.is(ThingsItems.SOCKS)) continue;
 
             socc = stack.copy();
             break;
@@ -46,11 +46,11 @@ public class JumpySocksRecipe extends SpecialCraftingRecipe {
         return socc;
     }
 
-    private static boolean matchOnce(CraftingRecipeInput input, Predicate<ItemStack> condition) {
+    private static boolean matchOnce(CraftingInput input, Predicate<ItemStack> condition) {
         boolean found = false;
 
-        for (int i = 0; i < input.getSize(); i++) {
-            if (!condition.test(input.getStackInSlot(i))) continue;
+        for (int i = 0; i < input.size(); i++) {
+            if (!condition.test(input.getItem(i))) continue;
             if (found) return false;
 
             found = true;
@@ -60,7 +60,7 @@ public class JumpySocksRecipe extends SpecialCraftingRecipe {
     }
 
     @Override
-    public boolean fits(int width, int height) {
+    public boolean canCraftInDimensions(int width, int height) {
         return width > 1 && height > 1;
     }
 
@@ -73,7 +73,7 @@ public class JumpySocksRecipe extends SpecialCraftingRecipe {
         public static final Type INSTANCE = new Type();
     }
 
-    public static class Serializer extends SpecialRecipeSerializer<JumpySocksRecipe> {
+    public static class Serializer extends SimpleCraftingRecipeSerializer<JumpySocksRecipe> {
         public static final Serializer INSTANCE = new Serializer();
 
         private Serializer() {

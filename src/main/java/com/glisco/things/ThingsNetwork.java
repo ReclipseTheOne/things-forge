@@ -7,18 +7,24 @@ import com.glisco.things.items.ThingsItems;
 import com.glisco.things.items.trinkets.AgglomerationItem;
 import com.glisco.things.items.trinkets.SocksItem;
 import com.glisco.things.misc.DisplacementTomeScreenHandler;
+import com.glisco.things.misc.DisplacementTomeScreenHandler.ActionPacket.Action;
+import io.wispforest.accessories.api.AccessoriesCapability;
 import io.wispforest.owo.network.OwoNetChannel;
 import io.wispforest.owo.ops.ItemOps;
 import io.wispforest.owo.ops.WorldOps;
-import net.minecraft.screen.GenericContainerScreenHandler;
-import net.minecraft.screen.NamedScreenHandlerFactory;
-import net.minecraft.screen.SimpleNamedScreenHandlerFactory;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.state.property.Properties;
-import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.BlockHitResult;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -27,25 +33,25 @@ public class ThingsNetwork {
     public static final Logger LOGGER = LogManager.getLogger("things-network");
     public static final OwoNetChannel CHANNEL = OwoNetChannel.create(Things.id("main"));
 
-    private static final NamedScreenHandlerFactory ENDER_POUCH_FACTORY = new SimpleNamedScreenHandlerFactory((syncId, inv, player) ->
-            GenericContainerScreenHandler.createGeneric9x3(syncId, inv, player.getEnderChestInventory()),
-            Text.translatable("container.enderpouch"));
+    private static final MenuProvider ENDER_POUCH_FACTORY = new SimpleMenuProvider((syncId, inv, player) ->
+            ChestMenu.threeRows(syncId, inv, player.getEnderChestInventory()),
+            Component.translatable("container.enderpouch"));
 
     public static void init() {
         CHANNEL.registerServerbound(OpenEnderChestPacket.class, (message, access) -> {
             final var player = access.player();
-            final var capability = player.accessoriesCapability();
+            final var capability = AccessoriesCapability.get(player);
 
             if (capability == null || !capability.isEquipped(ThingsItems.ENDER_POUCH)) {
                 LOGGER.warn("Received illegal openEChest packet");
                 return;
             }
 
-            player.openHandledScreen(ENDER_POUCH_FACTORY);
+            player.openMenu(ENDER_POUCH_FACTORY);
         });
 
         CHANNEL.registerServerbound(DisplacementTomeScreenHandler.ActionPacket.class, (message, access) -> {
-            if (!(access.player().currentScreenHandler instanceof DisplacementTomeScreenHandler handler)) return;
+            if (!(access.player().containerMenu instanceof DisplacementTomeScreenHandler handler)) return;
             final var action = message.action();
 
             switch (action) {
@@ -61,44 +67,44 @@ public class ThingsNetwork {
         });
 
         CHANNEL.registerClientbound(DisplacementTomeScreenHandler.UpdateClientPacket.class, (message, access) -> {
-            if (!(access.runtime().currentScreen instanceof final DisplacementTomeScreen tomeScreen)) return;
-            tomeScreen.getScreenHandler().setBook(message.tome());
-            tomeScreen.clearAndInit();
+            if (!(access.runtime().screen instanceof final DisplacementTomeScreen tomeScreen)) return;
+            tomeScreen.getMenu().setBook(message.tome());
+            tomeScreen.rebuildWidgets();
         });
 
         CHANNEL.registerServerbound(PlaceItemPacket.class, (message, access) -> {
             final var target = message.target();
-            final var pos = target.getBlockPos().offset(target.getSide());
+            final var pos = target.getBlockPos().relative(target.getDirection());
 
-            final var world = access.player().getWorld();
+            final var world = access.player().level();
             if (!world.getBlockState(pos).isAir()) return;
-            if (!world.canSetBlock(pos)) {
+            if (!world.isLoaded(pos)) {
                 LOGGER.warn("Received illegal place item packet");
                 return;
             }
 
-            final var stack = access.player().getStackInHand(Hand.MAIN_HAND);
+            final var stack = access.player().getItemInHand(InteractionHand.MAIN_HAND);
             if (stack.isEmpty()) return;
 
-            if (!world.getBlockState(target.getBlockPos()).isSideSolidFullSquare(world, target.getBlockPos(), target.getSide())) return;
+            if (!world.getBlockState(target.getBlockPos()).isFaceSturdy(world, target.getBlockPos(), target.getDirection())) return;
 
-            world.setBlockState(pos, ThingsBlocks.PLACED_ITEM.getDefaultState().with(Properties.FACING, target.getSide().getOpposite()));
+            world.setBlockAndUpdate(pos, ThingsBlocks.PLACED_ITEM.defaultBlockState().setValue(BlockStateProperties.FACING, target.getDirection().getOpposite()));
             ((PlacedItemBlockEntity) world.getBlockEntity(pos)).setItem(ItemOps.singleCopy(stack));
-            stack.decrement(1);
+            stack.shrink(1);
         });
 
         CHANNEL.registerServerbound(ToggleSocksJumpBoostPacket.class, (message, access) -> {
             var player = access.player();
-            var capability = player.accessoriesCapability();
+            var capability = AccessoriesCapability.get(player);
             if (capability == null || !capability.isEquipped(ThingsItems.SOCKS)) return;
 
             var socks = capability.getEquipped(ThingsItems.SOCKS).get(0).stack();
-            if (!socks.contains(SocksItem.JUMPY_AND_ENABLED)) return;
+            if (!socks.has(SocksItem.JUMPY_AND_ENABLED)) return;
 
             socks.set(SocksItem.JUMPY_AND_ENABLED, !socks.get(SocksItem.JUMPY_AND_ENABLED));
 
-            WorldOps.playSound(player.getWorld(), player.getPos(), SoundEvents.UI_TOAST_IN, SoundCategory.PLAYERS, 1, 2);
-            Things.TOGGLE_JUMP_BOOST_PARTICLES.spawn(player.getWorld(), player.getPos());
+            WorldOps.playSound(player.level(), player.position(), SoundEvents.UI_TOAST_IN, SoundSource.PLAYERS, 1, 2);
+            Things.TOGGLE_JUMP_BOOST_PARTICLES.spawn(player.level(), player.position());
         });
 
         CHANNEL.registerServerbound(AgglomerationItem.ScrollHandStackTrinket.class, AgglomerationItem.ScrollHandStackTrinket::scrollItemStack);

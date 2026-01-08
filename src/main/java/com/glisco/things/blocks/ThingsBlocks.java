@@ -1,23 +1,24 @@
 package com.glisco.things.blocks;
 
 import com.glisco.things.Things;
-import io.wispforest.owo.itemgroup.OwoItemSettings;
+import com.mojang.datafixers.types.Type;
+import io.wispforest.owo.itemgroup.OwoItemSettingsExtension;
 import io.wispforest.owo.registration.reflect.BlockRegistryContainer;
-import net.minecraft.block.AbstractBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.ExperienceDroppingBlock;
-import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.tooltip.TooltipType;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.intprovider.UniformIntProvider;
-
 import java.util.List;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.valueproviders.UniformInt;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DropExperienceBlock;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockBehaviour;
 
 public class ThingsBlocks implements BlockRegistryContainer {
 
@@ -25,29 +26,29 @@ public class ThingsBlocks implements BlockRegistryContainer {
     public static final Block QUARTZ_GLOWSTONE_FIXTURE = new GlowstoneFixtureBlock();
     public static final Block DEEPSLATE_GLOWSTONE_FIXTURE = new GlowstoneFixtureBlock();
 
-    public static final Block GLEAMING_ORE = new ExperienceDroppingBlock(UniformIntProvider.create(3, 7), AbstractBlock.Settings.copy(Blocks.DIAMOND_ORE).luminance($ -> 5).requiresTool());
-    public static final Block DEEPSLATE_GLEAMING_ORE = new ExperienceDroppingBlock(UniformIntProvider.create(3, 7), AbstractBlock.Settings.copy(Blocks.DEEPSLATE_DIAMOND_ORE).luminance($ -> 5).requiresTool());
+    public static final Block GLEAMING_ORE = new DropExperienceBlock(UniformInt.of(3, 7), BlockBehaviour.Properties.ofFullCopy(Blocks.DIAMOND_ORE).lightLevel($ -> 5).requiresCorrectToolForDrops());
+    public static final Block DEEPSLATE_GLEAMING_ORE = new DropExperienceBlock(UniformInt.of(3, 7), BlockBehaviour.Properties.ofFullCopy(Blocks.DEEPSLATE_DIAMOND_ORE).lightLevel($ -> 5).requiresCorrectToolForDrops());
 
     public static final Block DIAMOND_PRESSURE_PLATE = new DiamondPressurePlateBlock();
-    public static final BlockItem DIAMOND_PRESSURE_PLATE_ITEM = new BlockItem(ThingsBlocks.DIAMOND_PRESSURE_PLATE, new OwoItemSettings().group(Things.THINGS_GROUP)) {
+    public static final BlockItem DIAMOND_PRESSURE_PLATE_ITEM = new BlockItem(ThingsBlocks.DIAMOND_PRESSURE_PLATE, ((OwoItemSettingsExtension) new Item.Properties()).group(() -> Things.THINGS_GROUP)) {
         @Override
-        public void appendTooltip(ItemStack stack, TooltipContext context, List<Text> tooltip, TooltipType type) {
-            super.appendTooltip(stack, context, tooltip, type);
-            tooltip.add(Text.literal("Players only").formatted(Formatting.GRAY));
+        public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag type) {
+            super.appendHoverText(stack, context, tooltip, type);
+            tooltip.add(Component.literal("Players only").withStyle(ChatFormatting.GRAY));
         }
     };
 
     @NoBlockItem
     public static final Block PLACED_ITEM = new PlacedItemBlock();
-    public static final BlockEntityType<PlacedItemBlockEntity> PLACED_ITEM_BLOCK_ENTITY = BlockEntityType.Builder.create(PlacedItemBlockEntity::new, PLACED_ITEM).build();
+    public static final BlockEntityType<PlacedItemBlockEntity> PLACED_ITEM_BLOCK_ENTITY = BlockEntityType.Builder.of(PlacedItemBlockEntity::new, PLACED_ITEM).build(null);
 
     @Override
     public BlockItem createBlockItem(Block block, String identifier) {
-        return block == DIAMOND_PRESSURE_PLATE ? DIAMOND_PRESSURE_PLATE_ITEM : new BlockItem(block, new OwoItemSettings().group(Things.THINGS_GROUP));
+        return block == DIAMOND_PRESSURE_PLATE ? DIAMOND_PRESSURE_PLATE_ITEM : new BlockItem(block, ((OwoItemSettingsExtension) new Item.Properties()).group(() -> Things.THINGS_GROUP));
     }
 
     @Override
     public void afterFieldProcessing() {
-        Registry.register(Registries.BLOCK_ENTITY_TYPE, Things.id("placed_item"), PLACED_ITEM_BLOCK_ENTITY);
+        Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, Things.id("placed_item"), PLACED_ITEM_BLOCK_ENTITY);
     }
 }
