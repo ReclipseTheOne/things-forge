@@ -1,0 +1,52 @@
+modLoader = "javafml"
+loaderVersion = "${loader_version_range}"
+license = "${mod_license}"
+issueTrackerURL = "https://github.com/wisp-forest/things/issues"
+
+[[mods]]
+modId = "${mod_id}"
+version = "${mod_version}"
+displayName = "${mod_name}"
+logoFile = "assets/things/icon.png"
+credits = "Pois1x, Noaaan, naschhorn, esiotrot, BasiqueEvangelist"
+authors = "${mod_authors}"
+description = '''Trinkets and other utilities'''
+displayURL = "https://modrinth.com/mod/things"
+
+[[mixins]]
+config = "things.mixins.json"
+
+[[dependencies.${mod_id}]]
+modId = "neoforge"
+type = "required"
+versionRange = "${neoforge_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "curios"
+type = "required"
+versionRange = "${curios_version_range}"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "owo"
+type = "required"
+versionRange = "${owo_version_range}"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.${mod_id}]]
+modId = "roughlyenoughitems"
+type = "optional"
+versionRange = "*"
+ordering = "AFTER"
+side = "CLIENT"
