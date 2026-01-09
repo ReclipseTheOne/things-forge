@@ -22,12 +22,11 @@ public abstract class MouseMixin {
 
     @Shadow
     @Final
-    private Minecraft client;
+    private Minecraft minecraft;
 
-    // TODO agglomeration item select
-    @WrapWithCondition(method = "onMouseScroll", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/player/PlayerInventory;scrollInHotbar(D)V"))
+    @WrapWithCondition(method = "onScroll", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/player/Inventory;swapPaint(D)V"))
     private boolean beforePlayerScrollHotbar(Inventory instance, double scrollAmount) {
-        LocalPlayer player = this.client.player;
+        LocalPlayer player = this.minecraft.player;
 
         if (!player.isSecondaryUseActive()) return true;
 

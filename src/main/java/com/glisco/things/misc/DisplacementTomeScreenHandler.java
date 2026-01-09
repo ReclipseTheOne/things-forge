@@ -4,7 +4,6 @@ import com.glisco.things.Things;
 import com.glisco.things.ThingsNetwork;
 import com.glisco.things.items.ThingsItems;
 import com.glisco.things.items.generic.DisplacementTomeItem;
-import com.google.common.collect.ImmutableMap;
 import io.wispforest.owo.client.screens.ScreenUtils;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -25,7 +24,7 @@ public class DisplacementTomeScreenHandler extends AbstractContainerMenu {
     }
 
     public DisplacementTomeScreenHandler(int syncId, Inventory playerInventory, ItemStack book) {
-        super(Things.DISPLACEMENT_TOME_SCREEN_HANDLER, syncId);
+        super(Things.DISPLACEMENT_TOME_SCREEN_HANDLER.get(), syncId);
         this.book = book;
     }
 
@@ -43,65 +42,47 @@ public class DisplacementTomeScreenHandler extends AbstractContainerMenu {
         this.book = book;
     }
 
-    public void requestTeleport(String location) {
-        if (this.player instanceof ServerPlayer serverPlayer) {
-            int currentFuel = book.get(DisplacementTomeItem.FUEL);
+    public void requestTeleport(ServerPlayer player, String location) {
+        int currentFuel = book.get(DisplacementTomeItem.FUEL);
 
-            if (currentFuel < Things.CONFIG.displacementTomeFuelConsumption()) {
-                serverPlayer.playSound(SoundEvents.ENDERMAN_TELEPORT, 1, 0);
-                return;
-            }
-
-            var targets = book.get(DisplacementTomeItem.TARGETS);
-            if (!targets.containsKey(location)) return;
-
-            currentFuel -= Things.CONFIG.displacementTomeFuelConsumption();
-            book.set(DisplacementTomeItem.FUEL, currentFuel);
-
-            targets.get(location).teleportPlayer(serverPlayer);
-            serverPlayer.level().playSound(null, serverPlayer.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.MASTER, 1, 1);
-            serverPlayer.closeContainer();
-        } else {
-            ThingsNetwork.CHANNEL.clientHandle().send(ActionPacket.teleport(location));
+        if (currentFuel < Things.CONFIG.displacementTomeFuelConsumption()) {
+            player.playSound(SoundEvents.ENDERMAN_TELEPORT, 1, 0);
+            return;
         }
+
+        var targets = book.get(DisplacementTomeItem.TARGETS);
+        if (!targets.containsKey(location)) return;
+
+        currentFuel -= Things.CONFIG.displacementTomeFuelConsumption();
+        book.set(DisplacementTomeItem.FUEL, currentFuel);
+
+        targets.get(location).teleportPlayer(player);
+        player.level().playSound(null, player.blockPosition(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.MASTER, 1, 1);
+        player.closeContainer();
     }
 
-    public void addPoint(String name) {
-        if (this.player() instanceof ServerPlayer player) {
-            player.getInventory().getItem(player.getInventory().findSlotMatchingItem(new ItemStack(ThingsItems.DISPLACEMENT_PAGE))).shrink(1);
-            broadcastChanges();
-            DisplacementTomeItem.storeTeleportTargetInBook(book,
-                    DisplacementTomeItem.Target.fromPlayer(player), name, false);
-            updateClient();
-        } else {
-            ThingsNetwork.CHANNEL.clientHandle().send(ActionPacket.create(name));
-        }
+    public void addPoint(ServerPlayer player, String name) {
+        player.getInventory().getItem(player.getInventory().findSlotMatchingItem(new ItemStack(ThingsItems.DISPLACEMENT_PAGE))).shrink(1);
+        broadcastChanges();
+        DisplacementTomeItem.storeTeleportTargetInBook(book,
+                DisplacementTomeItem.Target.fromPlayer(player), name, false);
+        updateClient(player);
     }
 
-    public boolean deletePoint(String name) {
-        if (this.player() instanceof ServerPlayer) {
-            boolean result = DisplacementTomeItem.deletePoint(book, name);
-            updateClient();
-            return result;
-        } else {
-            ThingsNetwork.CHANNEL.clientHandle().send(ActionPacket.delete(name));
-            return true;
-        }
+    public boolean deletePoint(ServerPlayer player, String name) {
+        boolean result = DisplacementTomeItem.deletePoint(book, name);
+        updateClient(player);
+        return result;
     }
 
-    public boolean renamePoint(String data) {
-        if (this.player() instanceof ServerPlayer) {
-            boolean result = DisplacementTomeItem.rename(book, data);
-            updateClient();
-            return result;
-        } else {
-            ThingsNetwork.CHANNEL.clientHandle().send(ActionPacket.rename(data));
-            return true;
-        }
+    public boolean renamePoint(ServerPlayer player, String data) {
+        boolean result = DisplacementTomeItem.rename(book, data);
+        updateClient(player);
+        return result;
     }
 
-    private void updateClient() {
-        ThingsNetwork.CHANNEL.serverHandle(this.player()).send(new UpdateClientPacket(book));
+    private void updateClient(ServerPlayer player) {
+        ThingsNetwork.CHANNEL.serverHandle(player).send(new UpdateClientPacket(book));
     }
 
     public ItemStack getBook() {

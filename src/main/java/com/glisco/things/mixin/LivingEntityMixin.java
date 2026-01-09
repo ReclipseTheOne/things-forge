@@ -34,8 +34,8 @@ public abstract class LivingEntityMixin extends Entity implements AccessoriesAPI
         super(type, world);
     }
 
-    @Inject(method = "takeShieldHit", at = @At("HEAD"))
-    public void onShieldHit(LivingEntity attacker, CallbackInfo ci) {
+    @Inject(method = "hurtCurrentlyUsedShield", at = @At("HEAD"))
+    public void onShieldHit(float amount, CallbackInfo ci) {
         LivingEntity user = (LivingEntity) (Object) this;
 
         if (!user.getUseItem().is(Things.ENCHANTABLE_WITH_RETRIBUTION)) return;
@@ -43,7 +43,7 @@ public abstract class LivingEntityMixin extends Entity implements AccessoriesAPI
         user.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 40, 0));
     }
 
-    @Inject(method = "blockedByShield", at = @At("RETURN"))
+    @Inject(method = "isDamageSourceBlocked", at = @At("RETURN"))
     public void onShieldBlock(DamageSource source, CallbackInfoReturnable<Boolean> cir) {
         if (!cir.getReturnValue()) return;
 
@@ -54,7 +54,7 @@ public abstract class LivingEntityMixin extends Entity implements AccessoriesAPI
         user.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 40, 0));
     }
 
-    @ModifyVariable(method = "travel", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;hasStatusEffect(Lnet/minecraft/registry/entry/RegistryEntry;)Z", ordinal = 1), ordinal = 1)
+    @ModifyVariable(method = "travel", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;hasEffect(Lnet/minecraft/core/Holder;)Z", ordinal = 1), ordinal = 1)
     public float waxGlandWater(float j) {
         var capability = this.accessoriesCapability();
 
@@ -63,7 +63,7 @@ public abstract class LivingEntityMixin extends Entity implements AccessoriesAPI
         return j * Things.CONFIG.waxGlandMultiplier();
     }
 
-    @ModifyArg(method = "travel", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;updateVelocity(FLnet/minecraft/util/math/Vec3d;)V"))
+    @ModifyArg(method = "travel", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;moveRelative(FLnet/minecraft/world/phys/Vec3;)V"))
     public float waxGlandLava(float speed) {
         var capability = this.accessoriesCapability();
 
@@ -76,7 +76,7 @@ public abstract class LivingEntityMixin extends Entity implements AccessoriesAPI
     }
 
     @SuppressWarnings("InvalidInjectorMethodSignature")
-    @ModifyVariable(method = "handleFallDamage", at = @At(value = "INVOKE_ASSIGN", target = "Lnet/minecraft/entity/LivingEntity;computeFallDamage(FF)I"))
+    @ModifyVariable(method = "causeFallDamage", at = @At(value = "INVOKE_ASSIGN", target = "Lnet/minecraft/world/entity/LivingEntity;calculateFallDamage(FF)I"))
     private int decreaseFallDamage(int originalFallDamage) {
         var capability = this.accessoriesCapability();
 
@@ -87,7 +87,7 @@ public abstract class LivingEntityMixin extends Entity implements AccessoriesAPI
         return originalFallDamage;
     }
 
-    @ModifyArg(method = "travel", at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;damage(Lnet/minecraft/entity/damage/DamageSource;F)Z"))
+    @ModifyArg(method = "travel", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/LivingEntity;hurt(Lnet/minecraft/world/damagesource/DamageSource;F)Z"))
     private float decreaseKineticDamage(DamageSource source, float damage) {
         if (source.type() != this.level().damageSources().flyIntoWall().type())
             return damage;
@@ -101,19 +101,19 @@ public abstract class LivingEntityMixin extends Entity implements AccessoriesAPI
         return damage;
     }
 
-    @ModifyArg(method = "readCustomDataFromNbt", at = @At(value = "INVOKE", target = "Ljava/util/Map;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"), index = 1)
+    @ModifyArg(method = "readAdditionalSaveData", at = @At(value = "INVOKE", target = "Ljava/util/Map;put(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;"), index = 1)
     private Object attachPlayerToEffect(Object effect) {
         ((ExtendedStatusEffectInstance) effect).things$setAttachedEntity((LivingEntity) (Object) this);
 
         return effect;
     }
 
-    @Inject(method = "onStatusEffectApplied", at = @At("HEAD"))
+    @Inject(method = "onEffectAdded", at = @At("HEAD"))
     private void attachPlayerToEffect(MobEffectInstance effect, Entity source, CallbackInfo ci) {
         ((ExtendedStatusEffectInstance) effect).things$setAttachedEntity((LivingEntity) (Object) this);
     }
 
-    @Inject(method = "onStatusEffectUpgraded", at = @At("HEAD"))
+    @Inject(method = "onEffectUpdated", at = @At("HEAD"))
     private void attachPlayerToEffect(MobEffectInstance effect, boolean reapplyEffect, Entity source, CallbackInfo ci) {
         ((ExtendedStatusEffectInstance) effect).things$setAttachedEntity((LivingEntity) (Object) this);
     }

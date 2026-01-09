@@ -8,10 +8,10 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 @Mixin(BaseContainerBlockEntity.class)
 public interface LockableContainerBlockEntityAccessor {
 
-    @Accessor("lock")
+    @Accessor("lockKey")
     void things$setLock(LockCode lock);
 
-    @Accessor("lock")
+    @Accessor("lockKey")
     LockCode things$getLock();
 
 }

@@ -87,8 +87,8 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 dependencies {
     // Curios API
-    compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
-    runtimeOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}"
+//    compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
+//    runtimeOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}"
 
     // OWO-lib for NeoForge
     implementation "io.wispforest:owo-lib-neoforge:${owo_version}"
@@ -110,8 +110,11 @@ dependencies {
 
     implementation "io.wispforest:accessories-neoforge:${accessories_version}"
 
-    implementation annotationProcessor("io.wispforest:owo-lib-neoforge:${project.owo_version}")
+    annotationProcessor "io.wispforest:owo-lib-neoforge:${owo_version}"
 }
+
+// Add annotation processor generated sources to IDEA
+sourceSets.main.java.srcDir file("${buildDir}/generated/sources/annotationProcessor/java/main")
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'

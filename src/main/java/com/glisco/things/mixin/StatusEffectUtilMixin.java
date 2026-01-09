@@ -22,13 +22,13 @@ public abstract class StatusEffectUtilMixin {
 
     @Inject(method = "hasDigSpeed", at = @At("HEAD"), cancellable = true)
     private static void hasMomentum(LivingEntity entity, CallbackInfoReturnable<Boolean> cir) {
-        if (entity.hasEffect(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(Things.MOMENTUM))) cir.setReturnValue(true);
+        if (entity.hasEffect(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(Things.MOMENTUM.get()))) cir.setReturnValue(true);
     }
 
     @ModifyVariable(method = "getDigSpeedAmplification", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/effect/MobEffectInstance;getAmplifier()I", ordinal = 1), ordinal = 0)
     private static int getMomentumAmplifier(LivingEntity entity, @Local int i) {
-        if (entity.hasEffect(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(Things.MOMENTUM))) {
-            i += entity.getEffect(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(Things.MOMENTUM)).getAmplifier();
+        if (entity.hasEffect(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(Things.MOMENTUM.get()))) {
+            i += entity.getEffect(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(Things.MOMENTUM.get())).getAmplifier();
             if (entity.hasEffect(MobEffects.DIG_SPEED) && i == 0) i++;
         }
 

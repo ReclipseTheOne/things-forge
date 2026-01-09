@@ -15,7 +15,7 @@ import io.wispforest.owo.particles.systems.ParticleSystem;
 import io.wispforest.owo.particles.systems.ParticleSystemController;
 import io.wispforest.owo.registration.reflect.FieldRegistrationHandler;
 import io.wispforest.owo.util.Maldenhagen;
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.CriterionTrigger;
 import net.minecraft.core.Registry;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -39,8 +39,10 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
+import net.neoforged.neoforge.registries.RegisterEvent;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
@@ -56,14 +58,16 @@ public class Things {
 
     public static final ThingsConfig CONFIG = ThingsConfig.createAndLoad();
 
-    public static final OwoItemGroup THINGS_GROUP = OwoItemGroup.builder(ResourceLocation.fromNamespaceAndPath("things", "things"), () -> Icon.of(ThingsItems.BATER_WUCKET)).build();
+    public static OwoItemGroup THINGS_GROUP;
     public static final ResourceKey<Enchantment> RETRIBUTION = ResourceKey.create(Registries.ENCHANTMENT, id("retribution"));
-    public static final MobEffect MOMENTUM = new MomentumStatusEffect();
 
-    public static final AnAmazinglyExpensiveMistakeCriterion AN_AMAZINGLY_EXPENSIVE_MISTAKE_CRITERION = new AnAmazinglyExpensiveMistakeCriterion();
 
-    // NeoForge Attachment for sock data (replaces CCA)
+    // NeoForge Deferred Registers
     public static final DeferredRegister<AttachmentType<?>> ATTACHMENT_TYPES = DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, MOD_ID);
+    public static final DeferredRegister<MobEffect> MOB_EFFECTS = DeferredRegister.create(Registries.MOB_EFFECT, MOD_ID);
+    public static final DeferredRegister<MenuType<?>> MENUS = DeferredRegister.create(Registries.MENU, MOD_ID);
+    public static final DeferredRegister<CriterionTrigger<?>> CRITERIA = DeferredRegister.create(Registries.TRIGGER_TYPE, MOD_ID);
+
     public static final Supplier<AttachmentType<SockDataComponent>> SOCK_DATA = ATTACHMENT_TYPES.register(
             "sock_data",
             () -> AttachmentType.serializable(a -> {
@@ -73,7 +77,15 @@ public class Things {
             }).build()
     );
 
-    public static final MenuType<DisplacementTomeScreenHandler> DISPLACEMENT_TOME_SCREEN_HANDLER = new MenuType<>(DisplacementTomeScreenHandler::new, FeatureFlags.DEFAULT_FLAGS);
+    public static final DeferredHolder<MobEffect, MomentumStatusEffect> MOMENTUM = MOB_EFFECTS.register("momentum", MomentumStatusEffect::new);
+
+    public static final Supplier<MenuType<DisplacementTomeScreenHandler>> DISPLACEMENT_TOME_SCREEN_HANDLER = MENUS.register(
+            "displacement_tome",
+            () -> new MenuType<>(DisplacementTomeScreenHandler::new, FeatureFlags.DEFAULT_FLAGS)
+    );
+
+    public static final DeferredHolder<CriterionTrigger<?>, AnAmazinglyExpensiveMistakeCriterion> AN_AMAZINGLY_EXPENSIVE_MISTAKE_CRITERION =
+            CRITERIA.register("an_amazingly_expensive_mistake", AnAmazinglyExpensiveMistakeCriterion::new);
 
     private static final ResourceKey<PlacedFeature> GLEAMING_ORE = ResourceKey.create(Registries.PLACED_FEATURE, id("ore_gleaming"));
 
@@ -82,17 +94,30 @@ public class Things {
     public static final TagKey<Item> DISPLACEMENT_TOME_FUELS = TagKey.create(Registries.ITEM, id("displacement_tome_fuels"));
     public static final TagKey<Item> ENCHANTABLE_WITH_RETRIBUTION = TagKey.create(Registries.ITEM, id("enchantable/retribution"));
 
-    private static final Set<Item> BROKEN_WATCH_RECIPE = ImmutableSet.of(Items.LEATHER, Items.CLOCK, ThingsItems.GLEAMING_COMPOUND);
+    private static Set<Item> BROKEN_WATCH_RECIPE;
 
-    private static final ParticleSystemController CONTROLLER = new ParticleSystemController(id("particles"));
-    public static final ParticleSystem<Void> TOGGLE_JUMP_BOOST_PARTICLES = CONTROLLER.register(Void.class, (world, pos, data) -> {
-        ClientParticles.setParticleCount(25);
-        ClientParticles.spawnPrecise(ParticleTypes.WAX_OFF, world, pos.add(0, 1, 0), 1, 2, 1);
-    });
+    private static ParticleSystemController CONTROLLER;
+    private static ParticleSystem<Void> TOGGLE_JUMP_BOOST_PARTICLES;
+
+    public static ParticleSystem<Void> getToggleJumpBoostParticles() {
+        if (CONTROLLER == null) {
+            CONTROLLER = new ParticleSystemController(id("particles"));
+            TOGGLE_JUMP_BOOST_PARTICLES = CONTROLLER.register(Void.class, (world, pos, data) -> {
+                ClientParticles.setParticleCount(25);
+                ClientParticles.spawnPrecise(ParticleTypes.WAX_OFF, world, pos.add(0, 1, 0), 1, 2, 1);
+            });
+        }
+        return TOGGLE_JUMP_BOOST_PARTICLES;
+    }
 
     public Things(IEventBus modEventBus, ModContainer modContainer) {
-        // Register attachment types
+        // Register deferred registers
         ATTACHMENT_TYPES.register(modEventBus);
+        MOB_EFFECTS.register(modEventBus);
+        MENUS.register(modEventBus);
+        CRITERIA.register(modEventBus);
+
+        modEventBus.addListener(this::onRegister);
 
         // Register common setup event
         modEventBus.addListener(this::commonSetup);
@@ -101,30 +126,40 @@ public class Things {
         NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
     }
 
+    private void onRegister(RegisterEvent event) {
+        event.register(Registries.ITEM, helper -> {
+            FieldRegistrationHandler.register(ThingsItems.class, MOD_ID, false);
+        });
+
+        event.register(Registries.BLOCK, helper -> {
+            FieldRegistrationHandler.register(ThingsBlocks.class, MOD_ID, false);
+        });
+
+        event.register(Registries.RECIPE_TYPE, helper -> {
+            Registry.register(BuiltInRegistries.RECIPE_TYPE, id("sock_upgrade_crafting"), SockUpgradeRecipe.Type.INSTANCE);
+            Registry.register(BuiltInRegistries.RECIPE_TYPE, id("jumpy_sock_crafting"), JumpySocksRecipe.Type.INSTANCE);
+        });
+
+        event.register(Registries.RECIPE_SERIALIZER, helper -> {
+            Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("sock_upgrade_crafting"), SockUpgradeRecipe.Serializer.INSTANCE);
+            Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("jumpy_sock_crafting"), JumpySocksRecipe.Serializer.INSTANCE);
+            Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("agglomerate"), AgglomerateRecipe.Serializer.INSTANCE);
+        });
+
+        event.register(Registries.DATA_COMPONENT_TYPE, helper -> {
+            Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, id("agglomeration_selected_stack"), AgglomerationItem.SelectedStackComponent.COMPONENT_TYPE);
+        });
+
+        event.register(Registries.CREATIVE_MODE_TAB, helper -> {
+            THINGS_GROUP = OwoItemGroup.builder(ResourceLocation.fromNamespaceAndPath("things", "things"), () -> Icon.of(ThingsItems.BATER_WUCKET)).build();
+        });
+    }
+
     private void commonSetup(final FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
-            FieldRegistrationHandler.register(ThingsItems.class, MOD_ID, false);
-            FieldRegistrationHandler.register(ThingsBlocks.class, MOD_ID, false);
-
             if (CONFIG.generateGleamingOre()) {
                 Maldenhagen.injectCopium(ThingsBlocks.GLEAMING_ORE);
             }
-
-            Registry.register(BuiltInRegistries.RECIPE_TYPE, id("sock_upgrade_crafting"), SockUpgradeRecipe.Type.INSTANCE);
-            Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("sock_upgrade_crafting"), SockUpgradeRecipe.Serializer.INSTANCE);
-
-            Registry.register(BuiltInRegistries.RECIPE_TYPE, id("jumpy_sock_crafting"), JumpySocksRecipe.Type.INSTANCE);
-            Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("jumpy_sock_crafting"), JumpySocksRecipe.Serializer.INSTANCE);
-
-            Registry.register(BuiltInRegistries.RECIPE_SERIALIZER, id("agglomerate"), AgglomerateRecipe.Serializer.INSTANCE);
-
-            Registry.register(BuiltInRegistries.MOB_EFFECT, id("momentum"), MOMENTUM);
-
-            Registry.register(BuiltInRegistries.MENU, id("displacement_tome"), DISPLACEMENT_TOME_SCREEN_HANDLER);
-
-            CriteriaTriggers.register("things:an_amazingly_expensive_mistake", AN_AMAZINGLY_EXPENSIVE_MISTAKE_CRITERION);
-
-            Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, Things.id("agglomeration_selected_stack"), AgglomerationItem.SelectedStackComponent.COMPONENT_TYPE);
 
             ThingsNetwork.init();
             THINGS_GROUP.initialize();
@@ -143,6 +178,9 @@ public class Things {
     }
 
     public static Set<Item> brokenWatchRecipe() {
+        if (BROKEN_WATCH_RECIPE == null) {
+            BROKEN_WATCH_RECIPE = ImmutableSet.of(Items.LEATHER, Items.CLOCK, ThingsItems.GLEAMING_COMPOUND);
+        }
         return BROKEN_WATCH_RECIPE;
     }
 

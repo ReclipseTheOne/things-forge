@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(BlockBehaviour.BlockStateBase.class)
 public class AbstractBlockStateMixin {
-    @Inject(method = "getHardness", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "getDestroySpeed", at = @At("HEAD"), cancellable = true)
     private void disallowBreakingLockedContainers(BlockGetter world, BlockPos pos, CallbackInfoReturnable<Float> cir) {
         if (!Things.CONFIG.makeLockedContainersUnbreakable()) return;
 

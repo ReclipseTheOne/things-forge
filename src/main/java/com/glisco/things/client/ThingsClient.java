@@ -40,7 +40,6 @@ import org.lwjgl.glfw.GLFW;
 import io.wispforest.accessories.api.client.AccessoriesRendererRegistry;
 import io.wispforest.accessories.api.client.AccessoryRenderer;
 import io.wispforest.accessories.api.components.AccessoriesDataComponents;
-import top.theillusivec4.curios.api.CuriosApi;
 
 /**
  * Client-side initialization for the Things mod on NeoForge.
@@ -91,7 +90,7 @@ public class ThingsClient {
     }
 
 	private void registerMenus(RegisterMenuScreensEvent event) {
-		event.register(Things.DISPLACEMENT_TOME_SCREEN_HANDLER, DisplacementTomeScreen::new);
+		event.register(Things.DISPLACEMENT_TOME_SCREEN_HANDLER.get(), DisplacementTomeScreen::new);
 	}
 
 

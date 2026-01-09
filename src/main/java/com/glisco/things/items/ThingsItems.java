@@ -21,7 +21,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
-import top.theillusivec4.curios.api.CuriosApi;
 
 @SuppressWarnings("unused")
 public class ThingsItems implements ItemRegistryContainer {

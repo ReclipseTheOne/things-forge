@@ -51,17 +51,18 @@ public class ThingsNetwork {
         });
 
         CHANNEL.registerServerbound(DisplacementTomeScreenHandler.ActionPacket.class, (message, access) -> {
-            if (!(access.player().containerMenu instanceof DisplacementTomeScreenHandler handler)) return;
+            final var player = access.player();
+            if (!(player.containerMenu instanceof DisplacementTomeScreenHandler handler)) return;
             final var action = message.action();
 
             switch (action) {
-                case TELEPORT -> handler.requestTeleport(message.data());
-                case CREATE_POINT -> handler.addPoint(message.data());
+                case TELEPORT -> handler.requestTeleport(player, message.data());
+                case CREATE_POINT -> handler.addPoint(player, message.data());
                 case DELETE_POINT -> {
-                    if (!handler.deletePoint(message.data())) ThingsNetwork.LOGGER.warn("Received invalid DELETE_POINT request");
+                    if (!handler.deletePoint(player, message.data())) ThingsNetwork.LOGGER.warn("Received invalid DELETE_POINT request");
                 }
                 case RENAME_POINT -> {
-                    if (!handler.renamePoint(message.data())) ThingsNetwork.LOGGER.warn("Received invalid RENAME_POINT request");
+                    if (!handler.renamePoint(player, message.data())) ThingsNetwork.LOGGER.warn("Received invalid RENAME_POINT request");
                 }
             }
         });
@@ -104,7 +105,7 @@ public class ThingsNetwork {
             socks.set(SocksItem.JUMPY_AND_ENABLED, !socks.get(SocksItem.JUMPY_AND_ENABLED));
 
             WorldOps.playSound(player.level(), player.position(), SoundEvents.UI_TOAST_IN, SoundSource.PLAYERS, 1, 2);
-            Things.TOGGLE_JUMP_BOOST_PARTICLES.spawn(player.level(), player.position());
+            Things.getToggleJumpBoostParticles().spawn(player.level(), player.position());
         });
 
         CHANNEL.registerServerbound(AgglomerationItem.ScrollHandStackTrinket.class, AgglomerationItem.ScrollHandStackTrinket::scrollItemStack);

@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Player.class)
 public abstract class PlayerEntityMixin {
 
-    @Inject(method = "eatFood", at = @At("TAIL"))
+    @Inject(method = "eat", at = @At("TAIL"))
     public void onConsume(Level world, ItemStack stack, FoodProperties foodComponent, CallbackInfoReturnable<ItemStack> cir) {
 
         if (!stack.getItem().equals(Items.POISONOUS_POTATO)) return;

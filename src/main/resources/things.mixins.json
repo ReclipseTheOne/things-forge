@@ -23,14 +23,13 @@
     "access.ContainerLockAccessor",
     "access.ForgingScreenHandlerAccessor",
     "access.ItemAccessor",
-    "access.LockableContainerBlockEntityAccessor",
-    "TooltipComponentMixin"
+    "access.LockableContainerBlockEntityAccessor"
   ],
   "client": [
     "client.MouseMixin",
     "client.access.CreativeSlotAccessor",
     "client.access.HandledScreenAccessor",
-    "client.access.ScreenAccessor"
+    "TooltipComponentMixin"
   ],
   "injectors": {
     "defaultRequire": 1

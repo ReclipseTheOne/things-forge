@@ -22,10 +22,10 @@ import net.minecraft.world.phys.AABB;
 @Mixin(BeaconBlockEntity.class)
 public class BeaconBlockEntityMixin {
 
-    @Inject(method = "applyPlayerEffects", at = @At(value = "INVOKE", target = "Ljava/util/List;iterator()Ljava/util/Iterator;", ordinal = 0), locals = LocalCapture.CAPTURE_FAILHARD)
+    @Inject(method = "applyEffects", at = @At(value = "INVOKE", target = "Ljava/util/List;iterator()Ljava/util/Iterator;", ordinal = 0), locals = LocalCapture.CAPTURE_FAILHARD)
     private static void nerfHaste(Level world, BlockPos pos, int beaconLevel, @Nullable Holder<MobEffect> primaryEffect, @Nullable Holder<MobEffect> secondaryEffect, CallbackInfo ci, double d, int i, int j, AABB box, List<Player> list) {
         if (!Things.CONFIG.nerfBeaconsWithMomentum() || secondaryEffect != MobEffects.DIG_SPEED) return;
-        list.removeIf(playerEntity -> playerEntity.hasEffect(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(Things.MOMENTUM)));
+        list.removeIf(playerEntity -> playerEntity.hasEffect(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(Things.MOMENTUM.get())));
     }
 
 }

@@ -20,7 +20,7 @@ public class MiningGlovesItem extends TrinketItemWithOptionalTooltip {
     public void tick(ItemStack stack, SlotReference reference) {
         if (!(reference.entity() instanceof ServerPlayer player)) return;
 
-        player.addEffect(new MobEffectInstance(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(Things.MOMENTUM), 5,
+        player.addEffect(new MobEffectInstance(BuiltInRegistries.MOB_EFFECT.wrapAsHolder(Things.MOMENTUM.get()), 5,
                 Things.CONFIG.effectLevels.miningGloveMomentum() - 1, true, false, true));
     }
 }

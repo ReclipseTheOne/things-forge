@@ -10,7 +10,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ClientTooltipComponent.class)
 public interface TooltipComponentMixin {
-    @Inject(method = "of(Lnet/minecraft/text/OrderedText;)Lnet/minecraft/client/gui/tooltip/TooltipComponent;", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "create(Lnet/minecraft/util/FormattedCharSequence;)Lnet/minecraft/client/gui/screens/inventory/tooltip/ClientTooltipComponent;", at = @At("HEAD"), cancellable = true)
     private static void things$unwrapOrderedTooltipHolder(FormattedCharSequence text, CallbackInfoReturnable<ClientTooltipComponent> cir) {
         if(text instanceof TooltipComponentText.TooltipDataAsOrderedText holder) {
             cir.setReturnValue(ClientTooltipComponent.create(holder.tooltipData()));

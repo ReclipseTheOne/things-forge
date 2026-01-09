@@ -16,12 +16,12 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 @Mixin(BucketItem.class)
 public abstract class BucketItemMixin {
 
-    @Inject(method = "getEmptiedStack", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "getEmptySuccessItem", at = @At("HEAD"), cancellable = true)
     private static void preserverBaterWucket(ItemStack stack, Player player, CallbackInfoReturnable<ItemStack> cir) {
         if (stack.is(ThingsItems.BATER_WUCKET)) cir.setReturnValue(stack);
     }
 
-    @WrapOperation(method = "use", at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemUsage;exchangeStack(Lnet/minecraft/item/ItemStack;Lnet/minecraft/entity/player/PlayerEntity;Lnet/minecraft/item/ItemStack;)Lnet/minecraft/item/ItemStack;"))
+    @WrapOperation(method = "use", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemUtils;createFilledResult(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/item/ItemStack;)Lnet/minecraft/world/item/ItemStack;"))
     private ItemStack preserveBemptyUcket(ItemStack inputStack, Player player, ItemStack outputStack, Operation<ItemStack> original) {
         return original.call(inputStack, player, inputStack.is(ThingsItems.BEMPTY_UCKET) ? inputStack.copy() : outputStack);
     }

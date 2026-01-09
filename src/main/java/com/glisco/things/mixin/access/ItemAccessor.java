@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 @Mixin(Item.class)
 public interface ItemAccessor {
 
-    @Accessor("recipeRemainder")
+    @Accessor("craftingRemainingItem")
     @Mutable
     void things$setRecipeRemainder(Item recipeRemainder);
 

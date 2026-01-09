@@ -22,7 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(BrewingStandBlockEntity.class)
 public class BrewingStandBlockEntityMixin {
 
-    @Inject(method = "canCraft", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "isBrewable", at = @At("HEAD"), cancellable = true)
     private static void checkCraft(PotionBrewing brewingRecipeRegistry, NonNullList<ItemStack> slots, CallbackInfoReturnable<Boolean> cir) {
         if (Things.recallPotionIngredient() == null) return;
         if (!slots.get(3).is(Things.recallPotionIngredient())) return;
@@ -36,7 +36,7 @@ public class BrewingStandBlockEntityMixin {
         }
     }
 
-    @Inject(method = "craft", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "doBrew", at = @At("HEAD"), cancellable = true)
     private static void doCraft(Level world, BlockPos pos, NonNullList<ItemStack> slots, CallbackInfo ci) {
         if (Things.recallPotionIngredient() == null) return;
 

@@ -27,16 +27,16 @@ import net.minecraft.world.phys.Vec3;
 public abstract class EntityMixin {
 
     @Shadow
-    public abstract Vec3 getPos();
+    public abstract Vec3 position();
 
     @Shadow
     public abstract boolean isRemoved();
 
     @Shadow
-    public Level world;
+    public Level level;
 
     @Shadow
-    public abstract BlockPos getBlockPos();
+    public abstract BlockPos blockPosition();
 
     @Shadow
     public abstract EntityType<?> getType();
@@ -51,7 +51,7 @@ public abstract class EntityMixin {
     public abstract double getZ();
 
     @SuppressWarnings("ConstantConditions")
-    @Inject(method = "move", at = @At(value = "INVOKE", target = "Lnet/minecraft/util/math/Vec3d;lengthSquared()D", ordinal = 1), locals = LocalCapture.CAPTURE_FAILHARD)
+    @Inject(method = "move", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/phys/Vec3;lengthSqr()D", ordinal = 1), locals = LocalCapture.CAPTURE_FAILHARD)
     private void pistonCrushing(MoverType movementType, Vec3 movement, CallbackInfo ci, Vec3 vec3d) {
         if (!((Object) this instanceof ItemEntity itemEntity)) return;
 
@@ -66,7 +66,7 @@ public abstract class EntityMixin {
         recipe.remove(thisItem);
         int craftCount = itemEntity.getItem().getCount();
 
-        final var items = this.world.getEntitiesOfClass(ItemEntity.class, new AABB(this.getBlockPos()), ItemEntity::isAlive);
+        final var items = this.level.getEntitiesOfClass(ItemEntity.class, new AABB(this.blockPosition()), ItemEntity::isAlive);
         final var craftingParticipants = new ArrayList<>(Collections.singleton(itemEntity));
 
         for (var item : items) {
@@ -88,7 +88,7 @@ public abstract class EntityMixin {
             }
 
             for (int i = 0; i < craftCount; i++) {
-                this.world.addFreshEntity(new ItemEntity(this.world, this.getX(), this.getY(), this.getZ(), ThingsItems.BROKEN_WATCH.getDefaultInstance()));
+                this.level.addFreshEntity(new ItemEntity(this.level, this.getX(), this.getY(), this.getZ(), ThingsItems.BROKEN_WATCH.getDefaultInstance()));
             }
         }
     }

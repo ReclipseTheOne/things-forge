@@ -17,7 +17,7 @@ public class ContainerLockMixin {
     @Final
     private String key;
 
-    @Inject(method = "canOpen", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "unlocksWith", at = @At("HEAD"), cancellable = true)
     public void checkOpen(ItemStack stack, CallbackInfoReturnable<Boolean> cir) {
         if (!(stack.getItem() instanceof ContainerKeyItem)) return;
         if (!String.valueOf(stack.getOrDefault(ContainerKeyItem.LOCK, 0)).equals(key)) return;

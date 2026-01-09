@@ -25,22 +25,22 @@ public class AnvilScreenHandlerMixin {
 
     @Shadow
     @Final
-    private DataSlot levelCost;
+    private DataSlot cost;
 
     @Shadow
-    private String newItemName;
+    private String itemName;
 
-    @Inject(method = "canTakeOutput", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "mayPickup", at = @At("HEAD"), cancellable = true)
     public void outputCheckOverride(Player player, boolean present, CallbackInfoReturnable<Boolean> cir) {
         ForgingScreenHandlerAccessor handler = (ForgingScreenHandlerAccessor) this;
 
         if (!handler.things$getInput().getItem(1).getItem().equals(ThingsItems.HARDENING_CATALYST)) return;
 
-        cir.setReturnValue(levelCost.get() <= player.experienceLevel);
+        cir.setReturnValue(cost.get() <= player.experienceLevel);
         cir.cancel();
     }
 
-    @Inject(method = "updateResult", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "createResult", at = @At("HEAD"), cancellable = true)
     public void setOutput(CallbackInfo ci) {
         ForgingScreenHandlerAccessor forgingHandler = (ForgingScreenHandlerAccessor) this;
 
@@ -55,14 +55,14 @@ public class AnvilScreenHandlerMixin {
         ItemStack newOutput = baseStack.copy();
         newOutput.set(DataComponents.UNBREAKABLE, new Unbreakable(true));
 
-        if (!StringUtils.isBlank(newItemName)) {
-            newOutput.set(DataComponents.CUSTOM_NAME, Component.literal(newItemName));
+        if (!StringUtils.isBlank(itemName)) {
+            newOutput.set(DataComponents.CUSTOM_NAME, Component.literal(itemName));
         } else {
             newOutput.remove(DataComponents.CUSTOM_DATA);
         }
 
         forgingHandler.things$getOutput().setItem(0, newOutput);
-        levelCost.set(30);
+        cost.set(30);
 
         ci.cancel();
     }

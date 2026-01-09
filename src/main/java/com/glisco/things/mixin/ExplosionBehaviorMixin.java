@@ -19,7 +19,7 @@ import net.minecraft.world.level.material.FluidState;
 @Mixin(ExplosionDamageCalculator.class)
 public class ExplosionBehaviorMixin {
 
-    @Inject(method = "getBlastResistance", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "getBlockExplosionResistance", at = @At("HEAD"), cancellable = true)
     private void disallowBreakingLockedContainers(Explosion explosion, BlockGetter world, BlockPos pos, BlockState blockState, FluidState fluidState, CallbackInfoReturnable<Optional<Float>> cir) {
         if (!Things.CONFIG.makeLockedContainersUnbreakable()) return;
 

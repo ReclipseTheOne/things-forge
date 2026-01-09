@@ -257,7 +257,7 @@ public class AgglomerationItem extends AccessoryItem implements AccessoryNest, A
     public void onStackChanges(ItemStack holderStack, AccessoryNestContainerContents data, @Nullable LivingEntity livingEntity) {
         for (var accessory : data.accessories()) {
             if (accessory.is(Items.AIR) && livingEntity instanceof ServerPlayer player) {
-                Things.AN_AMAZINGLY_EXPENSIVE_MISTAKE_CRITERION.trigger(player);
+                Things.AN_AMAZINGLY_EXPENSIVE_MISTAKE_CRITERION.get().trigger(player);
             }
         }
     }
